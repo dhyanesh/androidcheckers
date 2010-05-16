@@ -77,7 +77,7 @@ public class BoardView extends View {
 	 * @param x
 	 * @param y
 	 */
-	private void DrawSquare(Canvas canvas, int x, int y) {
+	private void drawSquare(Canvas canvas, int x, int y) {
 		Paint paint = null;
 		if (board.getSquare(x, y).isHighlighted()) {
 			paint = highlightPaint;
@@ -91,7 +91,7 @@ public class BoardView extends View {
 		canvas.drawRect(left, top, left + squareSize, top + squareSize, paint);
 	}
 
-	private void MaybeDrawPiece(Canvas canvas, int x, int y) {
+	private void maybeDrawPiece(Canvas canvas, int x, int y) {
 		Square square = board.getSquare(x, y);
 		if (square.isEmptySquare()) {
 			return;
@@ -112,8 +112,8 @@ public class BoardView extends View {
 		super.onDraw(canvas);
 		for (int i = 0; i < board.size(); ++i) {
 			for (int j = 0; j < board.size(); ++j) {
-				DrawSquare(canvas, i, j);
-				MaybeDrawPiece(canvas, i, j);
+				drawSquare(canvas, i, j);
+				maybeDrawPiece(canvas, i, j);
 			}
 		}
 	}

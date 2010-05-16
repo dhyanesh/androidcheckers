@@ -11,6 +11,8 @@ public class Game {
 	private HashSet<Square> jumpSquares;
 	private HashSet<Square> movePieces;
 	private Player currentPlayer;
+	// Indicates that the selected square is sticky.
+	private boolean sticky;
 	
 	public Game() {
 		board = new Board();
@@ -18,6 +20,7 @@ public class Game {
 		jumpSquares = new HashSet<Square>();
 		movePieces = new HashSet<Square>();
 		currentPlayer = Player.WHITE;
+		sticky = false;
 		recomputeValidSquares();
 	}
 	
@@ -101,8 +104,10 @@ public class Game {
 		int yDiff = getYDirection(origin);
 		Player oppositePlayer = Player.getOppositePlayer(origin.getPiece().getPlayer());
 		
-		boolean value = maybeAddValidJumpSquares(x, y, 1, yDiff, oppositePlayer, squares);
-		value |= maybeAddValidJumpSquares(x, y, -1, yDiff, oppositePlayer, squares);
+		int xDiff = 1;
+		boolean value = maybeAddValidJumpSquares(x, y, xDiff, yDiff, oppositePlayer, squares);
+		xDiff = -1;
+		value |= maybeAddValidJumpSquares(x, y, xDiff, yDiff, oppositePlayer, squares);
 		return value;
 	}
 	
@@ -133,6 +138,7 @@ public class Game {
 				}
 					
 				if (maybeAddValidMoveSquares(square, null) || maybeAddValidJumpSquares(square, null)) {
+				  // The square is a valid move square only if the piece on it can move or jump.
 					movePieces.add(square);
 				}
 			}
@@ -153,37 +159,65 @@ public class Game {
 		currentPlayer = Player.getOppositePlayer(currentPlayer);
 	}
 	
+	private boolean maybeKillPiece(Square currentSquare) {
+	  if (!jumpSquares.contains(currentSquare)) {
+	    return false;
+	  }
+	  
+	  // Kill the piece in between.
+	  boolean killed = killPieces(selectedSquare, currentSquare);
+	  assert killed == true;
+	  // Move the current player's piece.
+	  currentSquare.setPiece(selectedSquare.getPiece());
+	  selectedSquare.setEmptySquare();
+	  
+	  clearValidSquares();
+	  // If there are more jump squares for this piece, the current player still plays, otherwise we switch players.
+	  if (maybeAddValidJumpSquares(currentSquare, jumpSquares)) {
+	    selectSquare(currentSquare);
+	    highlightValidSquares();
+	    sticky = true;
+	  } else {
+	    switchPlayer();
+	    deselectSquare();
+	    recomputeValidSquares();
+	    sticky = false;
+	  }
+	  
+	  return true;
+	}
+	
 	public void doMove(int x, int y) {
 		Square currentSquare = board.getSquare(x, y);
 		
-		if (currentSquare == selectedSquare) {
-			deselectSquare();
-		} else if (currentSquare.isEmptySquare()) {
-			if (selectedSquare != null) {
-				if (moveSquares.contains(currentSquare)) {
-					currentSquare.setPiece(selectedSquare.getPiece());
-					selectedSquare.setEmptySquare();
-					switchPlayer();
-				} else if (jumpSquares.contains(currentSquare)) {
-					boolean killed = killPiece(selectedSquare, currentSquare);
-					currentSquare.setPiece(selectedSquare.getPiece());
-					selectedSquare.setEmptySquare();
-					if (killed) {
-						selectSquare(currentSquare);
-					} else {
-						switchPlayer();
-					}
-				}
-			}
-			deselectSquare();
-		} else if (movePieces.contains(currentSquare)) {
-			selectSquare(currentSquare);
+		if (sticky) {
+		  maybeKillPiece(currentSquare);
+		  return;
 		}
 		
-		recomputeValidSquares();
+		if (currentSquare == selectedSquare) {
+			// This is deselecting the currently selected piece.
+			deselectSquare();
+		  recomputeValidSquares();
+		} else if (selectedSquare != null && currentSquare.isEmptySquare()) {
+			// If we have square selected and an empty square is touched.
+			if (moveSquares.contains(currentSquare)) {
+				// Move the current player's piece.
+				currentSquare.setPiece(selectedSquare.getPiece());
+				selectedSquare.setEmptySquare();
+				switchPlayer();
+				deselectSquare();
+				recomputeValidSquares();
+			} else { 
+			  maybeKillPiece(currentSquare);
+			}
+		} else if (movePieces.contains(currentSquare)) {
+			selectSquare(currentSquare);
+		  recomputeValidSquares();
+		}
 	}
 
-	private boolean killPiece(Square startSquare, Square endSquare) {
+	private boolean killPieces(Square startSquare, Square endSquare) {
 		int xDiff = endSquare.getX() - startSquare.getX() > 0 ? 1 : -1;
 		int yDiff = endSquare.getY() - startSquare.getY() > 0 ? 1 : -1;
 		
