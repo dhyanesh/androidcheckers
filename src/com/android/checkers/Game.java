@@ -188,6 +188,10 @@ public class Game {
 	}
 	
 	public void doMove(int x, int y) {
+	  if (x < 0 || y < 0 || x >= board.size() || y >= board.size()) {
+	    return;
+	  }
+	  
 		Square currentSquare = board.getSquare(x, y);
 		
 		if (sticky) {
