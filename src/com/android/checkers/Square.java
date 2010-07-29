@@ -1,9 +1,15 @@
 package com.android.checkers;
 
+import java.io.Serializable;
+
 import com.android.checkers.Piece.Player;
 
-public class Square {
-	private Piece piece;
+public class Square implements Serializable {
+	/**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
+  private Piece piece;
 	private boolean highlighted;
 	private int x;
 	private int y;

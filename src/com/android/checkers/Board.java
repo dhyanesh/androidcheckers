@@ -1,7 +1,14 @@
 package com.android.checkers;
 
-public class Board {
-	private final static int kSize = 8;
+import java.io.Serializable;
+
+public class Board implements Serializable {
+	/**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
+
+  private final static int kSize = 8;
 
 	private Square board[][];
 	

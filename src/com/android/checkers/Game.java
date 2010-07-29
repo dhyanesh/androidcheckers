@@ -1,11 +1,17 @@
 package com.android.checkers;
 
+import java.io.Serializable;
 import java.util.HashSet;
 
 import com.android.checkers.Piece.Player;
 
-public class Game {
-	private Board board;
+public class Game implements Serializable {
+  /**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
+  
+  private Board board;
 	private Square selectedSquare;
 	private HashSet<Square> moveSquares;
 	private HashSet<Square> jumpSquares;
@@ -209,6 +215,7 @@ public class Game {
 				// Move the current player's piece.
 				currentSquare.setPiece(selectedSquare.getPiece());
 				selectedSquare.setEmptySquare();
+				
 				switchPlayer();
 				deselectSquare();
 				recomputeValidSquares();

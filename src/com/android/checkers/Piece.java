@@ -3,12 +3,19 @@
  */
 package com.android.checkers;
 
+import java.io.Serializable;
+
 /**
  * @author dhyanesh
  * 
  */
-public class Piece {
-	public enum Player {
+public class Piece implements Serializable {
+	/**
+   * 
+   */
+  private static final long serialVersionUID = 1L;
+
+  public enum Player {
 		WHITE, BLACK;
 		
 		public static Player getOppositePlayer(Player player) {

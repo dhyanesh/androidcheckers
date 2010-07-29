@@ -6,6 +6,7 @@ package com.android.checkers;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.os.Bundle;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -140,4 +141,14 @@ public class BoardView extends View {
 		invalidate();
 		return true;
 	}
+
+  public Bundle saveState() {
+    Bundle map = new Bundle();
+    map.putSerializable("game", game);
+    return map;
+  }
+
+  public void restoreState(Bundle map) {
+    game = (Game) map.getSerializable("game");
+  }
 }
