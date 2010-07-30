@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 
 public class BoardActivity extends Activity {
     private BoardView boardView;
@@ -47,9 +48,29 @@ public class BoardActivity extends Activity {
       super.onDestroy();
     }
     
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
       MenuInflater inflater = getMenuInflater();
       inflater.inflate(R.menu.options_menu, menu);
       return true;
+    }
+    
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.player_vs_player:
+            return true;
+        case R.id.computer_vs_player:
+            return true;
+        case R.id.player_vs_computer:
+            return true;
+        case R.id.undo_menu_item:
+            return true;
+        case R.id.options_menu_item:
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
     }
 }
