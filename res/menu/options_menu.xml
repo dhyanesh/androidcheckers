@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/new_game_menu_item"
+          android:title="@string/new_game_menu_item"
+          android:icon="@drawable/new_game" >
+        <menu>
+        		<group android:checkableBehavior="single">
+	        		<item android:id="@+id/player_vs_player"
+	        				  android:title="@string/player_vs_player"
+	        				  android:checked="true"/>
+	            <item android:id="@+id/player_vs_computer"
+	            			android:title="@string/player_vs_computer"
+	            			android:enabled="false"/>
+	            <item android:id="@+id/computer_vs_player"
+	            			android:title="@string/computer_vs_player"
+	            			android:enabled="false"/>
+	          </group>
+        </menu>
+    </item>
+    <item android:id="@+id/undo_menu_item"
+          android:title="@string/undo_menu_item"
+          android:icon="@drawable/undo" />
+    <item android:id="@+id/options_menu_item"
+          android:title="@string/options_menu_item"
+          android:icon="@drawable/options" />
+</menu>

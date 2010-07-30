@@ -2,6 +2,8 @@ package com.android.checkers;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
 
 public class BoardActivity extends Activity {
     private BoardView boardView;
@@ -43,5 +45,11 @@ public class BoardActivity extends Activity {
     @Override
     public void onDestroy() {
       super.onDestroy();
+    }
+    
+    public boolean onCreateOptionsMenu(Menu menu) {
+      MenuInflater inflater = getMenuInflater();
+      inflater.inflate(R.menu.options_menu, menu);
+      return true;
     }
 }

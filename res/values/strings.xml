@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Checkers</string>
+    <string name="player_vs_player">Player vs Player</string>
+    <string name="player_vs_computer">Player vs Computer</string>
+    <string name="computer_vs_player">Computer vs Player</string>
+   <string name="app_name">Checkers</string>
+    <string name="new_game_menu_item">New Game</string>
+    <string name="undo_menu_item">Undo</string>
+    <string name="options_menu_item">Options</string>
 </resources>
