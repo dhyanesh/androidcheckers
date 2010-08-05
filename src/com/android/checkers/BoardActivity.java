@@ -57,9 +57,10 @@ public class BoardActivity extends Activity {
     
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle item selection
+        // Handle item selection.
         switch (item.getItemId()) {
         case R.id.player_vs_player:
+            boardView.NewGame();
             return true;
         case R.id.computer_vs_player:
             return true;

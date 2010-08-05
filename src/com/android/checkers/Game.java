@@ -11,6 +11,15 @@ public class Game implements Serializable {
    */
   private static final long serialVersionUID = 1L;
   
+  private enum KillState {
+		NO_KILL, KILL_ONE, KILL_MORE;
+	}
+  
+  private class UndoState {
+    // Indicates whether sticky should be flipped while undoing.
+    private boolean flipSticky;
+  }
+	
   private Board board;
 	private Square selectedSquare;
 	private HashSet<Square> moveSquares;
@@ -57,6 +66,9 @@ public class Game implements Serializable {
 	private void highlightValidSquares() {
 		highlightSquareSet(moveSquares);
 		highlightSquareSet(jumpSquares);
+		if (selectedSquare != null) {
+		  selectedSquare.setHighlighted(true);
+		}
 	}
 	
 	private void clearSquareSet(HashSet<Square> squares) {
@@ -165,9 +177,9 @@ public class Game implements Serializable {
 		currentPlayer = Player.getOppositePlayer(currentPlayer);
 	}
 	
-	private boolean maybeKillPiece(Square currentSquare) {
+	private KillState maybeKillPiece(Square currentSquare) {
 	  if (!jumpSquares.contains(currentSquare)) {
-	    return false;
+	    return KillState.NO_KILL;
 	  }
 	  
 	  // Kill the piece in between.
@@ -179,18 +191,19 @@ public class Game implements Serializable {
 	  
 	  clearValidSquares();
 	  // If there are more jump squares for this piece, the current player still plays, otherwise we switch players.
+	  boolean kill_more;
 	  if (maybeAddValidJumpSquares(currentSquare, jumpSquares)) {
 	    selectSquare(currentSquare);
 	    highlightValidSquares();
-	    sticky = true;
+	    kill_more = true;
 	  } else {
 	    switchPlayer();
 	    deselectSquare();
 	    recomputeValidSquares();
-	    sticky = false;
+	    kill_more = false;
 	  }
 	  
-	  return true;
+	  return kill_more ? KillState.KILL_MORE : KillState.KILL_ONE;
 	}
 	
 	public void doMove(int x, int y) {
@@ -201,28 +214,53 @@ public class Game implements Serializable {
 		Square currentSquare = board.getSquare(x, y);
 		
 		if (sticky) {
-		  maybeKillPiece(currentSquare);
+		  KillState killState = maybeKillPiece(currentSquare);
+		  if (killState == KillState.KILL_ONE) {
+		    // We can't kill more so set sticky to false.
+		    sticky = false;
+		  }
 		  return;
 		}
 		
 		if (currentSquare == selectedSquare) {
-			// This is deselecting the currently selected piece.
 			deselectSquare();
 		  recomputeValidSquares();
-		} else if (selectedSquare != null && currentSquare.isEmptySquare()) {
-			// If we have square selected and an empty square is touched.
-			if (moveSquares.contains(currentSquare)) {
-				// Move the current player's piece.
-				currentSquare.setPiece(selectedSquare.getPiece());
-				selectedSquare.setEmptySquare();
-				
-				switchPlayer();
-				deselectSquare();
+		  return;
+		}
+		
+		if (selectedSquare != null) {
+		  if (currentSquare.isEmptySquare()) {
+				// If we have square selected and an empty square is touched.
+				if (moveSquares.contains(currentSquare)) {
+					// Move the current player's piece.
+					currentSquare.setPiece(selectedSquare.getPiece());
+					selectedSquare.setEmptySquare();
+					
+					switchPlayer();
+					deselectSquare();
+					recomputeValidSquares();
+				} else {
+				  KillState killState = maybeKillPiece(currentSquare);
+				  switch (killState) {
+				    case NO_KILL:
+							deselectSquare();
+						  recomputeValidSquares();
+				      break;
+				    case KILL_ONE:
+				      sticky = false;
+				      break;
+				    case KILL_MORE:
+				      sticky = true;
+				      break;
+				  }
+				}
+			} else {
+			  deselectSquare();
 				recomputeValidSquares();
-			} else { 
-			  maybeKillPiece(currentSquare);
 			}
-		} else if (movePieces.contains(currentSquare)) {
+		}
+		
+		if (movePieces.contains(currentSquare)) {
 			selectSquare(currentSquare);
 		  recomputeValidSquares();
 		}

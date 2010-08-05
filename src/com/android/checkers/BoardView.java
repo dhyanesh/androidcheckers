@@ -40,11 +40,19 @@ public class BoardView extends View {
 		initBoardView();
 	}
 
+	/**
+	 * @param context
+	 * @param attrs
+	 * @param defStyle
+	 */
 	public BoardView(Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
 		initBoardView();
 	}
 
+	/**
+	 * 
+	 */
 	private void initBoardView() {
 		setBackgroundColor(0xff000000);
 		setFocusable(true);
@@ -69,7 +77,14 @@ public class BoardView extends View {
 		highlightPaint.setARGB(255, 0, 0xEE, 0);
 		highlightPaint.setStyle(Paint.Style.FILL);
 
-		game = new Game();
+		initGame(new Game());
+	}
+	
+	/**
+	 * @param inGame
+	 */
+	private void initGame(Game inGame) {
+	  game = inGame;
 		board = game.getBoard();
 	}
 
@@ -92,6 +107,11 @@ public class BoardView extends View {
 		canvas.drawRect(left, top, left + squareSize, top + squareSize, paint);
 	}
 
+	/**
+	 * @param canvas
+	 * @param x
+	 * @param y
+	 */
 	private void maybeDrawPiece(Canvas canvas, int x, int y) {
 		Square square = board.getSquare(x, y);
 		if (square.isEmptySquare()) {
@@ -108,6 +128,9 @@ public class BoardView extends View {
 		canvas.drawCircle(cx, cy, (float) (squareSize / 2.5), paint);
 	}
 
+	/* (non-Javadoc)
+	 * @see android.view.View#onDraw(android.graphics.Canvas)
+	 */
 	@Override
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
@@ -119,6 +142,9 @@ public class BoardView extends View {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see android.view.View#onSizeChanged(int, int, int, int)
+	 */
 	@Override
 	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
 		int value = w < h ? w : h;
@@ -142,13 +168,23 @@ public class BoardView extends View {
 		return true;
 	}
 
+  /**
+   * @return
+   */
   public Bundle saveState() {
     Bundle map = new Bundle();
     map.putSerializable("game", game);
     return map;
   }
 
+  /**
+   * @param map
+   */
   public void restoreState(Bundle map) {
-    game = (Game) map.getSerializable("game");
+    initGame((Game) map.getSerializable("game"));
+  }
+
+  public void NewGame() {
+    initGame(new Game());
   }
 }
