@@ -67,6 +67,7 @@ public class BoardActivity extends Activity {
         case R.id.player_vs_computer:
             return true;
         case R.id.undo_menu_item:
+            boardView.undoMove();
             return true;
         case R.id.options_menu_item:
             return true;

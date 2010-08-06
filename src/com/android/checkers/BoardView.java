@@ -187,4 +187,9 @@ public class BoardView extends View {
   public void NewGame() {
     initGame(new Game());
   }
+
+  public void undoMove() {
+    game.undoMove();
+		invalidate();
+  }
 }
