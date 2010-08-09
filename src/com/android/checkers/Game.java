@@ -16,16 +16,21 @@ public class Game implements Serializable {
 	}
   
   private class Move {
-    private Square srcSquare;
-    private Square destSquare;
-    private Square killSquare; 
-    
     public Move(Square srcSquare, Square destSquare, Square killSquare) {
       super();
       this.srcSquare = srcSquare;
       this.destSquare = destSquare;
       this.killSquare = killSquare;
     }
+    // Indicates whether the player changed in this move.
+    // The player may not change when there are multiple jumps.
+    private boolean switchPlayer;
+    // Indicates whether sticky was flipped in this move.
+    private boolean flipSticky;
+    // Store the source, destination and killed piece of this move.
+    private Square srcSquare;
+    private Square destSquare;
+    private Square killSquare; 
     
     public Square getKillSquare() {
       return killSquare;
@@ -37,16 +42,6 @@ public class Game implements Serializable {
     public Square getDestSquare() {
       return destSquare;
     }
-  }
-  
-  private class UndoState {
-    // Indicates whether the player changed in the last move.
-    // The player may not change when there are multiple jumps.
-    private boolean switchPlayer;
-    // Indicates whether sticky was flipped in the last move.
-    private boolean flipSticky;
-    // Stores the previous move.
-    private Move lastMove;
     
     public boolean shouldSwitchPlayer() {
       return switchPlayer;
@@ -60,12 +55,6 @@ public class Game implements Serializable {
     public void setFlipSticky(boolean flipSticky) {
       this.flipSticky = flipSticky;
     }
-    public Move getLastMove() {
-      return lastMove;
-    }
-    public void setLastMove(Move lastMove) {
-      this.lastMove = lastMove;
-    }
   }
 	
   private Board board;
@@ -77,7 +66,7 @@ public class Game implements Serializable {
 	// Indicates that the selected square is sticky.
 	private boolean sticky;
 	// Stores undo state for a single move.
-	private UndoState undoState;
+	private Move lastMove;
 	
 	public Game() {
 		board = new Board();
@@ -236,9 +225,8 @@ public class Game implements Serializable {
 	  Square killSquare = killPiece(selectedSquare, currentSquare);
 	  assert killSquare != null;
 	  
-	  // First save the undo state.
-		undoState = new UndoState();
-		undoState.setLastMove(new Move(selectedSquare, currentSquare, killSquare));
+	  // First save the move.
+		lastMove = new Move(selectedSquare, currentSquare, killSquare);
 	  
 	  // Move the current player's piece.
 	  currentSquare.setPiece(selectedSquare.getPiece());
@@ -248,12 +236,12 @@ public class Game implements Serializable {
 	  // If there are more jump squares for this piece, the current player still plays, otherwise we switch players.
 	  boolean kill_more;
 	  if (maybeAddValidJumpSquares(currentSquare, jumpSquares)) {
-	    undoState.setSwitchPlayer(false);
+	    lastMove.setSwitchPlayer(false);
 	    selectSquare(currentSquare);
 	    highlightValidSquares();
 	    kill_more = true;
 	  } else {
-	    undoState.setSwitchPlayer(true);
+	    lastMove.setSwitchPlayer(true);
 	    switchPlayer();
 	    deselectSquare();
 	    recomputeValidSquares();
@@ -275,7 +263,7 @@ public class Game implements Serializable {
 		  if (killState == KillState.KILL_ONE) {
 		    // We can't kill more so set sticky to false.
 		    sticky = false;
-		    undoState.setFlipSticky(true);
+		    lastMove.setFlipSticky(true);
 		  }
 		  return;
 		}
@@ -291,9 +279,8 @@ public class Game implements Serializable {
 				// If we have square selected and an empty square is touched.
 				if (moveSquares.contains(currentSquare)) {
 				  // First save the undo state.
-					undoState = new UndoState();
-					undoState.setSwitchPlayer(true);
-					undoState.setLastMove(new Move(selectedSquare, currentSquare, null));
+					lastMove = new Move(selectedSquare, currentSquare, null);
+					lastMove.setSwitchPlayer(true);
 					
 					// Move the current player's piece.
 					currentSquare.setPiece(selectedSquare.getPiece());
@@ -313,7 +300,7 @@ public class Game implements Serializable {
 				    case KILL_ONE:
 				      break;
 				    case KILL_MORE:
-				      undoState.setFlipSticky(true);
+				      lastMove.setFlipSticky(true);
 				      sticky = true;
 				      break;
 				  }
@@ -348,32 +335,31 @@ public class Game implements Serializable {
 		return killSquare;
 	}
   public void undoMove() {
-    if (undoState == null) {
+    if (lastMove == null) {
       return;
     }
     
-    Move move = undoState.getLastMove(); 
-    Piece movedPiece = move.getDestSquare().getPiece();
+    Piece movedPiece = lastMove.getDestSquare().getPiece();
     assert movedPiece != null;
-    move.getSrcSquare().setPiece(movedPiece);
-    move.getDestSquare().setEmptySquare();
+    lastMove.getSrcSquare().setPiece(movedPiece);
+    lastMove.getDestSquare().setEmptySquare();
     deselectSquare();
     
-    Square killSquare = move.getKillSquare();
+    Square killSquare = lastMove.getKillSquare();
     if (killSquare != null) {
       killSquare.setPiece(movedPiece.isWhite() ? Piece.getBlackPiece() : Piece.getWhitePiece());
     }
     
-    if (undoState.shouldSwitchPlayer()) {
+    if (lastMove.shouldSwitchPlayer()) {
       switchPlayer();
     } 
     
-    if (undoState.shouldFlipSticky()) {
+    if (lastMove.shouldFlipSticky()) {
       sticky = !sticky;
     }
     
     recomputeValidSquares();
     
-    undoState = null;
+    lastMove = null;
   }
 }
