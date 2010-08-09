@@ -56,6 +56,12 @@ public class BoardActivity extends Activity {
     }
     
     @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+      menu.findItem(R.id.undo_menu_item).setEnabled(boardView.canUndo());
+      return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection.
         switch (item.getItemId()) {

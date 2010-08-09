@@ -19,6 +19,7 @@
     </item>
     <item android:id="@+id/undo_menu_item"
           android:title="@string/undo_menu_item"
+          android:enabled="false"
           android:icon="@drawable/undo" />
     <item android:id="@+id/options_menu_item"
           android:title="@string/options_menu_item"

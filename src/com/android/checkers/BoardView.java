@@ -192,4 +192,8 @@ public class BoardView extends View {
     game.undoMove();
 		invalidate();
   }
+
+  public boolean canUndo() {
+    return game.canUndo();
+  }
 }

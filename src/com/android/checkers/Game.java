@@ -84,6 +84,10 @@ public class Game implements Serializable {
 		return board;
 	}
 	
+	public boolean canUndo() {
+	  return !moveStack.empty();
+	}
+	
 	private void selectSquare(Square square) {
 		deselectSquare();
 		selectedSquare = square;
