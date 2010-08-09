@@ -2,6 +2,7 @@ package com.android.checkers;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Stack;
 
 import com.android.checkers.Piece.Player;
 
@@ -65,14 +66,15 @@ public class Game implements Serializable {
 	private Player currentPlayer;
 	// Indicates that the selected square is sticky.
 	private boolean sticky;
-	// Stores undo state for a single move.
-	private Move lastMove;
+	// Save the entire undo stack.
+	private Stack<Move> moveStack;
 	
 	public Game() {
 		board = new Board();
 		moveSquares = new HashSet<Square>();
 		jumpSquares = new HashSet<Square>();
 		movePieces = new HashSet<Square>();
+		moveStack = new Stack<Move>();
 		currentPlayer = Player.WHITE;
 		sticky = false;
 		recomputeValidSquares();
@@ -226,7 +228,7 @@ public class Game implements Serializable {
 	  assert killSquare != null;
 	  
 	  // First save the move.
-		lastMove = new Move(selectedSquare, currentSquare, killSquare);
+		moveStack.push(new Move(selectedSquare, currentSquare, killSquare));
 	  
 	  // Move the current player's piece.
 	  currentSquare.setPiece(selectedSquare.getPiece());
@@ -236,12 +238,12 @@ public class Game implements Serializable {
 	  // If there are more jump squares for this piece, the current player still plays, otherwise we switch players.
 	  boolean kill_more;
 	  if (maybeAddValidJumpSquares(currentSquare, jumpSquares)) {
-	    lastMove.setSwitchPlayer(false);
+	    moveStack.peek().setSwitchPlayer(false);
 	    selectSquare(currentSquare);
 	    highlightValidSquares();
 	    kill_more = true;
 	  } else {
-	    lastMove.setSwitchPlayer(true);
+	    moveStack.peek().setSwitchPlayer(true);
 	    switchPlayer();
 	    deselectSquare();
 	    recomputeValidSquares();
@@ -263,7 +265,7 @@ public class Game implements Serializable {
 		  if (killState == KillState.KILL_ONE) {
 		    // We can't kill more so set sticky to false.
 		    sticky = false;
-		    lastMove.setFlipSticky(true);
+		    moveStack.peek().setFlipSticky(true);
 		  }
 		  return;
 		}
@@ -279,8 +281,8 @@ public class Game implements Serializable {
 				// If we have square selected and an empty square is touched.
 				if (moveSquares.contains(currentSquare)) {
 				  // First save the undo state.
-					lastMove = new Move(selectedSquare, currentSquare, null);
-					lastMove.setSwitchPlayer(true);
+					moveStack.push(new Move(selectedSquare, currentSquare, null));
+					moveStack.peek().setSwitchPlayer(true);
 					
 					// Move the current player's piece.
 					currentSquare.setPiece(selectedSquare.getPiece());
@@ -300,7 +302,7 @@ public class Game implements Serializable {
 				    case KILL_ONE:
 				      break;
 				    case KILL_MORE:
-				      lastMove.setFlipSticky(true);
+				      moveStack.peek().setFlipSticky(true);
 				      sticky = true;
 				      break;
 				  }
@@ -335,10 +337,11 @@ public class Game implements Serializable {
 		return killSquare;
 	}
   public void undoMove() {
-    if (lastMove == null) {
+    if (moveStack.empty()) {
       return;
     }
     
+    Move lastMove = moveStack.pop();
     Piece movedPiece = lastMove.getDestSquare().getPiece();
     assert movedPiece != null;
     lastMove.getSrcSquare().setPiece(movedPiece);
@@ -359,7 +362,5 @@ public class Game implements Serializable {
     }
     
     recomputeValidSquares();
-    
-    lastMove = null;
   }
 }
