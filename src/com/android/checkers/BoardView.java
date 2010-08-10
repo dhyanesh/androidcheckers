@@ -95,7 +95,7 @@ public class BoardView extends View {
 	 */
 	private void drawSquare(Canvas canvas, int x, int y) {
 		Paint paint = null;
-		if (board.getSquare(x, y).isHighlighted()) {
+		if (game.isHighlightedSquare(board.getSquare(x, y))) {
 			paint = highlightPaint;
 		} else if (Board.isWhiteSquare(x, y)) {
 			paint = whitePaint;

@@ -10,13 +10,11 @@ public class Square implements Serializable {
    */
   private static final long serialVersionUID = 1L;
   private Piece piece;
-	private boolean highlighted;
 	private int x;
 	private int y;
 
 	public Square(int x, int y) {
 		this.piece = null;
-		this.highlighted = false;
 		this.x = x;
 		this.y = y;
 	}
@@ -41,16 +39,8 @@ public class Square implements Serializable {
 		return piece == null;
 	}
 
-	public boolean isHighlighted() {
-		return highlighted;
-	}
-
 	public void setEmptySquare() {
 		piece = null;
-	}
-
-	public void setHighlighted(boolean highlighted) {
-		this.highlighted = highlighted;
 	}
 
 	public void setPiece(Piece piece) {

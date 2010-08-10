@@ -88,45 +88,26 @@ public class Game implements Serializable {
 	  return !moveStack.empty();
 	}
 	
+	public boolean isHighlightedSquare(Square square) {
+		return selectedSquare == square || moveSquares.contains(square) || jumpSquares.contains(square);
+	}
+	
 	private void selectSquare(Square square) {
 		deselectSquare();
 		selectedSquare = square;
-		selectedSquare.setHighlighted(true);
 	}
 	
 	private void deselectSquare() {
 		if (selectedSquare == null) {
 			return;
 		}
-		selectedSquare.setHighlighted(false);
 		selectedSquare = null;
 	}
 	
-	private void highlightSquareSet(HashSet<Square> squares) {
-		for (Square square: squares) {
-			square.setHighlighted(true);
-		}
-	}
-	
-	private void highlightValidSquares() {
-		highlightSquareSet(moveSquares);
-		highlightSquareSet(jumpSquares);
-		if (selectedSquare != null) {
-		  selectedSquare.setHighlighted(true);
-		}
-	}
-	
-	private void clearSquareSet(HashSet<Square> squares) {
-		for (Square square: squares) {
-			square.setHighlighted(false);
-		}
-		squares.clear();
-	}
-	
 	private void clearValidSquares() {
-		clearSquareSet(moveSquares);
-		clearSquareSet(jumpSquares);
-		clearSquareSet(movePieces);
+		moveSquares.clear();
+		jumpSquares.clear();
+		movePieces.clear();
 	}
 	
 	private boolean maybeAddSquareToSet(int x, int y, HashSet<Square> squares) {
@@ -214,8 +195,6 @@ public class Game implements Serializable {
 		maybeAddValidMovePieces();
 		maybeAddValidMoveSquares(selectedSquare, moveSquares);
 		maybeAddValidJumpSquares(selectedSquare, jumpSquares);
-		
-		highlightValidSquares();
 	}
 	
 	private void switchPlayer() {
@@ -244,7 +223,6 @@ public class Game implements Serializable {
 	  if (maybeAddValidJumpSquares(currentSquare, jumpSquares)) {
 	    moveStack.peek().setSwitchPlayer(false);
 	    selectSquare(currentSquare);
-	    highlightValidSquares();
 	    kill_more = true;
 	  } else {
 	    moveStack.peek().setSwitchPlayer(true);
