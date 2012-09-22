@@ -13,7 +13,7 @@ public class GameMoveTask extends AsyncTask<Object, Void, BoardView> {
 	}
 
 	@Override
-	protected void onPostExecute(BoardView result) {
-		result.invalidate();
+	protected void onPostExecute(BoardView view) {
+		view.invalidate();
 	}
 }

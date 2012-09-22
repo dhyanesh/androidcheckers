@@ -162,9 +162,8 @@ public class BoardView extends View {
 		int currentX = (int) ((event.getX() - xOffset) / squareSize);
 		int currentY = (int) ((event.getY() - yOffset) / squareSize);
 		
-		game.doMove(currentX, currentY);
+		new GameMoveTask().execute(this, game, (Integer)currentX, (Integer)currentY);
 
-		invalidate();
 		return true;
 	}
 
@@ -190,7 +189,7 @@ public class BoardView extends View {
 
   public void undoMove() {
     game.undoMove();
-		invalidate();
+	invalidate();
   }
 
   public boolean canUndo() {
