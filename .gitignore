@@ -1,2 +1,4 @@
+# Ignore files starting with ".". Already tracked files are not affected.
+.*
 bin
 gen
