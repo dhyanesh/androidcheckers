@@ -1,20 +1,18 @@
 package com.android.checkers;
 
-import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Stack;
 
-import com.android.checkers.Piece.Player;
 
-public class Game implements Serializable {
+public class TwoPlayerGame implements GameInterface {
   /**
    * 
    */
   private static final long serialVersionUID = 1L;
   
   private enum KillState {
-		NO_KILL, KILL_ONE, KILL_MORE;
-	}
+	  NO_KILL, KILL_ONE, KILL_MORE;
+  }
   
   private class Move {
     public Move(Square srcSquare, Square destSquare, Square killSquare) {
@@ -58,7 +56,7 @@ public class Game implements Serializable {
     }
   }
 	
-  private Board board;
+    private Board board;
 	private Square selectedSquare;
 	private HashSet<Square> moveSquares;
 	private HashSet<Square> jumpSquares;
@@ -69,7 +67,7 @@ public class Game implements Serializable {
 	// Save the entire undo stack.
 	private Stack<Move> moveStack;
 	
-	public Game() {
+	public TwoPlayerGame() {
 		board = new Board();
 		moveSquares = new HashSet<Square>();
 		jumpSquares = new HashSet<Square>();
@@ -80,23 +78,32 @@ public class Game implements Serializable {
 		recomputeValidSquares();
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.android.checkers.GameInterface#getBoard()
+	 */
 	public Board getBoard() {
 		return board;
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.android.checkers.GameInterface#canUndo()
+	 */
 	public boolean canUndo() {
 	  return !moveStack.empty();
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.android.checkers.GameInterface#isHighlightedSquare(com.android.checkers.Square)
+	 */
 	public boolean isHighlightedSquare(Square square) {
 		return selectedSquare == square || moveSquares.contains(square) || jumpSquares.contains(square);
 	}
-	
+
 	private void selectSquare(Square square) {
 		deselectSquare();
 		selectedSquare = square;
 	}
-	
+
 	private void deselectSquare() {
 		if (selectedSquare == null) {
 			return;
@@ -235,76 +242,79 @@ public class Game implements Serializable {
 	  return kill_more ? KillState.KILL_MORE : KillState.KILL_ONE;
 	}
 	
+	/* (non-Javadoc)
+	 * @see com.android.checkers.GameInterface#doMove(int, int)
+	 */
 	public void doMove(int x, int y) {
 	  if (x < 0 || y < 0 || x >= board.size() || y >= board.size()) {
 	    return;
 	  }
 	  
-		Square currentSquare = board.getSquare(x, y);
-		
-		if (sticky) {
+	  Square currentSquare = board.getSquare(x, y);
+
+	  if (sticky) {
 		  KillState killState = maybeKillPiece(currentSquare);
 		  if (killState == KillState.KILL_ONE) {
-		    // We can't kill more so set sticky to false.
-		    sticky = false;
-		    moveStack.peek().setFlipSticky(true);
+			  // We can't kill more so set sticky to false.
+			  sticky = false;
+			  moveStack.peek().setFlipSticky(true);
 		  }
 		  return;
-		}
-		
-		if (currentSquare == selectedSquare) {
-			deselectSquare();
+	  }
+
+	  if (currentSquare == selectedSquare) {
+		  deselectSquare();
 		  recomputeValidSquares();
 		  return;
-		}
-		
-		if (selectedSquare != null) {
+	  }
+
+	  if (selectedSquare != null) {
 		  if (currentSquare.isEmptySquare()) {
-				// If we have square selected and an empty square is touched.
-				if (moveSquares.contains(currentSquare)) {
+			  // If we have square selected and an empty square is touched.
+			  if (moveSquares.contains(currentSquare)) {
 				  // First save the undo state.
-					moveStack.push(new Move(selectedSquare, currentSquare, null));
-					moveStack.peek().setSwitchPlayer(true);
-					
-					// Move the current player's piece.
-					currentSquare.setPiece(selectedSquare.getPiece());
-					selectedSquare.setEmptySquare();
-					switchPlayer();
-					
-					// De-select the square and find new moves.
-					deselectSquare();
-					recomputeValidSquares();
-				} else {
+				  moveStack.push(new Move(selectedSquare, currentSquare, null));
+				  moveStack.peek().setSwitchPlayer(true);
+
+				  // Move the current player's piece.
+				  currentSquare.setPiece(selectedSquare.getPiece());
+				  selectedSquare.setEmptySquare();
+				  switchPlayer();
+
+				  // De-select the square and find new moves.
+				  deselectSquare();
+				  recomputeValidSquares();
+			  } else {
 				  KillState killState = maybeKillPiece(currentSquare);
 				  switch (killState) {
-				    case NO_KILL:
-							deselectSquare();
-						  recomputeValidSquares();
-				      break;
-				    case KILL_ONE:
-				      break;
-				    case KILL_MORE:
-				      moveStack.peek().setFlipSticky(true);
-				      sticky = true;
-				      break;
+				  case NO_KILL:
+					  deselectSquare();
+					  recomputeValidSquares();
+					  break;
+				  case KILL_ONE:
+					  break;
+				  case KILL_MORE:
+					  moveStack.peek().setFlipSticky(true);
+					  sticky = true;
+					  break;
 				  }
-				}
-			} else {
+			  }
+		  } else {
 			  deselectSquare();
-				recomputeValidSquares();
-			}
-		}
-		
-		if (movePieces.contains(currentSquare)) {
-			selectSquare(currentSquare);
+			  recomputeValidSquares();
+		  }
+	  }
+
+	  if (movePieces.contains(currentSquare)) {
+		  selectSquare(currentSquare);
 		  recomputeValidSquares();
-		}
+	  }
 	}
 
 	private Square killPiece(Square startSquare, Square endSquare) {
 		int xDiff = endSquare.getX() - startSquare.getX() > 0 ? 1 : -1;
 		int yDiff = endSquare.getY() - startSquare.getY() > 0 ? 1 : -1;
-		
+
 		Square killSquare = null;
 		int x = startSquare.getX() + xDiff;
 		int y = startSquare.getY() + yDiff;
@@ -315,34 +325,37 @@ public class Game implements Serializable {
 				square.setEmptySquare();
 			}
 		}
-		
+
 		return killSquare;
 	}
-  public void undoMove() {
-    if (moveStack.empty()) {
-      return;
-    }
-    
-    Move lastMove = moveStack.pop();
-    Piece movedPiece = lastMove.getDestSquare().getPiece();
-    assert movedPiece != null;
-    lastMove.getSrcSquare().setPiece(movedPiece);
-    lastMove.getDestSquare().setEmptySquare();
-    deselectSquare();
-    
-    Square killSquare = lastMove.getKillSquare();
-    if (killSquare != null) {
-      killSquare.setPiece(movedPiece.isWhite() ? Piece.getBlackPiece() : Piece.getWhitePiece());
-    }
-    
-    if (lastMove.shouldSwitchPlayer()) {
-      switchPlayer();
-    } 
-    
-    if (lastMove.shouldFlipSticky()) {
-      sticky = !sticky;
-    }
-    
-    recomputeValidSquares();
-  }
+	/* (non-Javadoc)
+	 * @see com.android.checkers.GameInterface#undoMove()
+	 */
+	public void undoMove() {
+		if (moveStack.empty()) {
+			return;
+		}
+
+		Move lastMove = moveStack.pop();
+		Piece movedPiece = lastMove.getDestSquare().getPiece();
+		assert movedPiece != null;
+		lastMove.getSrcSquare().setPiece(movedPiece);
+		lastMove.getDestSquare().setEmptySquare();
+		deselectSquare();
+
+		Square killSquare = lastMove.getKillSquare();
+		if (killSquare != null) {
+			killSquare.setPiece(movedPiece.isWhite() ? Piece.getBlackPiece() : Piece.getWhitePiece());
+		}
+
+		if (lastMove.shouldSwitchPlayer()) {
+			switchPlayer();
+		} 
+
+		if (lastMove.shouldFlipSticky()) {
+			sticky = !sticky;
+		}
+
+		recomputeValidSquares();
+	}
 }

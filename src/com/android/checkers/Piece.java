@@ -15,20 +15,12 @@ public class Piece implements Serializable {
    */
   private static final long serialVersionUID = 1L;
 
-  public enum Player {
-		WHITE, BLACK;
-		
-		public static Player getOppositePlayer(Player player) {
-			return player == WHITE ? BLACK : WHITE;
-		}
-	}
-
-	private Player player;
+  private Player player;
 	private static Piece whitePiece = new Piece(Player.WHITE);
 	private static Piece blackPiece = new Piece(Player.BLACK);
 
-	private Piece(Player type) {
-		this.player = type;
+	private Piece(Player player) {
+		this.player = player;
 	}
 
 	public static Piece getWhitePiece() {

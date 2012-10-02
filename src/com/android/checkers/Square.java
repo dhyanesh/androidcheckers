@@ -2,7 +2,6 @@ package com.android.checkers;
 
 import java.io.Serializable;
 
-import com.android.checkers.Piece.Player;
 
 public class Square implements Serializable {
 	/**

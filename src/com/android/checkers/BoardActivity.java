@@ -69,8 +69,10 @@ public class BoardActivity extends Activity {
             boardView.NewGame();
             return true;
         case R.id.computer_vs_player:
+            boardView.NewGame();
             return true;
         case R.id.player_vs_computer:
+            boardView.NewGame();
             return true;
         case R.id.undo_menu_item:
             boardView.undoMove();
