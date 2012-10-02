@@ -66,13 +66,13 @@ public class BoardActivity extends Activity {
         // Handle item selection.
         switch (item.getItemId()) {
         case R.id.player_vs_player:
-            boardView.NewGame();
+            boardView.NewGame(new TwoPlayerGame());
             return true;
         case R.id.computer_vs_player:
-            boardView.NewGame();
+            boardView.NewGame(new OnePlayerGame(Player.BLACK));
             return true;
         case R.id.player_vs_computer:
-            boardView.NewGame();
+            boardView.NewGame(new OnePlayerGame(Player.WHITE));
             return true;
         case R.id.undo_menu_item:
             boardView.undoMove();

@@ -1,43 +1,56 @@
 package com.android.checkers;
 
-public class OnePlayerGame implements GameInterface {
+import java.util.HashSet;
+import java.util.Random;
+
+public class OnePlayerGame extends AbstractGame {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private TwoPlayerGame twoPlayerGame;
+	
 	private Player player;
+	private Random randomNumGenerator;
 	
 	public OnePlayerGame(Player player) {
-		twoPlayerGame = new TwoPlayerGame();
+		super();
 		this.player = player;
+		randomNumGenerator = new Random();
 		
 		if (player == Player.BLACK) {
 			playComputerMove();
 		}
 	}
+	
+	private Square pickRandomSquare(HashSet<Square> squareSet) {
+		int index = randomNumGenerator.nextInt(squareSet.size());
+		int i = 0;
+		
+		for(Square square : squareSet)
+		{
+		    if (i == index)
+		        return square;
+		    i++;
+		}
+		
+		return null;
+	}
 
 	private void playComputerMove() {
-	}
-
-	public Board getBoard() {
-		return twoPlayerGame.getBoard();
-	}
-
-	public boolean canUndo() {
-		return twoPlayerGame.canUndo();
-	}
-
-	public boolean isHighlightedSquare(Square square) {
-		return twoPlayerGame.isHighlightedSquare(square);
+		HashSet<Square> pieces = gameCore.getMovePieces();
+		Square srcSquare = pickRandomSquare(pieces);
+		HashSet<Square> possibleMoves = new HashSet<Square>();
+		gameCore.maybeAddValidMoveSquares(srcSquare, possibleMoves);
+		gameCore.maybeAddValidJumpSquares(srcSquare, possibleMoves);
+		Square destSquare = pickRandomSquare(possibleMoves);
+		gameCore.doMove(srcSquare, destSquare);
 	}
 
 	public void doMove(int x, int y) {
-		twoPlayerGame.doMove(x, y);
-	}
-
-	public void undoMove() {
-		twoPlayerGame.undoMove();
+		doPlayerMove(x, y);
+		while (player != gameCore.getCurrentPlayer()) {
+			playComputerMove();
+		}
 	}
 }

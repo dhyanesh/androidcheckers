@@ -26,7 +26,7 @@ public class BoardView extends View {
 	private Paint blackPiece;
 	private Paint highlightPaint;
 
-	private GameInterface game;
+	private AbstractGame game;
 	private Board board;
 
 	/**
@@ -83,8 +83,8 @@ public class BoardView extends View {
 	/**
 	 * @param inGame
 	 */
-	private void initGame(GameInterface inGame) {
-	  game = inGame;
+	private void initGame(AbstractGame absGame) {
+	  game = absGame;
 	  board = game.getBoard();
 	}
 
@@ -180,11 +180,11 @@ public class BoardView extends View {
    * @param map
    */
   public void restoreState(Bundle map) {
-    initGame((GameInterface) map.getSerializable("game"));
+    initGame((AbstractGame) map.getSerializable("game"));
   }
 
-  public void NewGame() {
-    initGame(new TwoPlayerGame());
+  public void NewGame(AbstractGame game) {
+    initGame(game);
     invalidate();
   }
 

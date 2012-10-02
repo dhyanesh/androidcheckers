@@ -10,10 +10,10 @@
 	        				  android:checked="true"/>
 	            <item android:id="@+id/player_vs_computer"
 	            			android:title="@string/player_vs_computer"
-	            			android:enabled="false"/>
+	            			android:enabled="true"/>
 	            <item android:id="@+id/computer_vs_player"
 	            			android:title="@string/computer_vs_player"
-	            			android:enabled="false"/>
+	            			android:enabled="true"/>
 	          </group>
         </menu>
     </item>

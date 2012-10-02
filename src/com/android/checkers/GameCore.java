@@ -74,6 +74,10 @@ public class GameCore implements Serializable {
 	public HashSet<Square> getMovePieces() {
 		return movePieces;
 	}
+	
+	public Player getCurrentPlayer() {
+		return currentPlayer;
+	}
 
 	public Board getBoard() {
 		return board;
