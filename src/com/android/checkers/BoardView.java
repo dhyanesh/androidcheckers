@@ -185,11 +185,12 @@ public class BoardView extends View {
 
   public void NewGame() {
     initGame(new TwoPlayerGame());
+    invalidate();
   }
 
   public void undoMove() {
     game.undoMove();
-	invalidate();
+    invalidate();
   }
 
   public boolean canUndo() {

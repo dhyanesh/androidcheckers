@@ -12,6 +12,13 @@ public class OnePlayerGame implements GameInterface {
 	public OnePlayerGame(Player player) {
 		twoPlayerGame = new TwoPlayerGame();
 		this.player = player;
+		
+		if (player == Player.BLACK) {
+			playComputerMove();
+		}
+	}
+
+	private void playComputerMove() {
 	}
 
 	public Board getBoard() {
