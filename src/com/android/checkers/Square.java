@@ -2,13 +2,12 @@ package com.android.checkers;
 
 import java.io.Serializable;
 
-
 public class Square implements Serializable {
 	/**
    * 
    */
-  private static final long serialVersionUID = 1L;
-  private Piece piece;
+	private static final long serialVersionUID = 1L;
+	private Piece piece;
 	private int x;
 	private int y;
 
@@ -17,11 +16,11 @@ public class Square implements Serializable {
 		this.x = x;
 		this.y = y;
 	}
-	
+
 	public int getX() {
 		return x;
 	}
-	
+
 	public int getY() {
 		return y;
 	}
@@ -29,7 +28,7 @@ public class Square implements Serializable {
 	public Piece getPiece() {
 		return piece;
 	}
-	
+
 	public boolean hasPlayer(Player player) {
 		return !isEmptySquare() && this.piece.getPlayer() == player;
 	}

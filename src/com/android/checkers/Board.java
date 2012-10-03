@@ -6,12 +6,12 @@ public class Board implements Serializable {
 	/**
    * 
    */
-  private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-  private final static int kSize = 8;
+	private final static int kSize = 8;
 
 	private Square board[][];
-	
+
 	public Board() {
 		board = new Square[kSize][kSize];
 		for (int i = 0; i < kSize; ++i) {
@@ -27,19 +27,19 @@ public class Board implements Serializable {
 			}
 		}
 	}
-	
+
 	public Square getSquare(int x, int y) {
 		return board[x][y];
 	}
-	
+
 	public int size() {
 		return kSize;
 	}
-	
+
 	public boolean isValidSquare(int x, int y) {
 		return x >= 0 && y >= 0 && x < size() && y < size();
 	}
-	
+
 	/**
 	 * @param x
 	 * @param y

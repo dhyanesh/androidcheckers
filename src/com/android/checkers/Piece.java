@@ -13,9 +13,9 @@ public class Piece implements Serializable {
 	/**
    * 
    */
-  private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-  private Player player;
+	private Player player;
 	private static Piece whitePiece = new Piece(Player.WHITE);
 	private static Piece blackPiece = new Piece(Player.BLACK);
 
@@ -26,7 +26,7 @@ public class Piece implements Serializable {
 	public static Piece getWhitePiece() {
 		return whitePiece;
 	}
-	
+
 	public static Piece getBlackPiece() {
 		return blackPiece;
 	}

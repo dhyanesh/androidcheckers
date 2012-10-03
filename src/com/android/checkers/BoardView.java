@@ -79,13 +79,13 @@ public class BoardView extends View {
 
 		initGame(new TwoPlayerGame());
 	}
-	
+
 	/**
 	 * @param inGame
 	 */
 	private void initGame(AbstractGame absGame) {
-	  game = absGame;
-	  board = game.getBoard();
+		game = absGame;
+		board = game.getBoard();
 	}
 
 	/**
@@ -128,7 +128,9 @@ public class BoardView extends View {
 		canvas.drawCircle(cx, cy, (float) (squareSize / 2.5), paint);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see android.view.View#onDraw(android.graphics.Canvas)
 	 */
 	@Override
@@ -142,7 +144,9 @@ public class BoardView extends View {
 		}
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see android.view.View#onSizeChanged(int, int, int, int)
 	 */
 	@Override
@@ -154,6 +158,7 @@ public class BoardView extends View {
 		yOffset = (h - squareSize * board.size()) / 2;
 	}
 
+	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 		if (event.getAction() != MotionEvent.ACTION_DOWN) {
 			return false;
@@ -161,39 +166,39 @@ public class BoardView extends View {
 
 		int currentX = (int) ((event.getX() - xOffset) / squareSize);
 		int currentY = (int) ((event.getY() - yOffset) / squareSize);
-		
-		new GameMoveTask().execute(this, game, (Integer)currentX, (Integer)currentY);
+
+		new GameMoveTask().execute(this, game, currentX, currentY);
 
 		return true;
 	}
 
-  /**
-   * @return
-   */
-  public Bundle saveState() {
-    Bundle map = new Bundle();
-    map.putSerializable("game", game);
-    return map;
-  }
+	/**
+	 * @return
+	 */
+	public Bundle saveState() {
+		Bundle map = new Bundle();
+		map.putSerializable("game", game);
+		return map;
+	}
 
-  /**
-   * @param map
-   */
-  public void restoreState(Bundle map) {
-    initGame((AbstractGame) map.getSerializable("game"));
-  }
+	/**
+	 * @param map
+	 */
+	public void restoreState(Bundle map) {
+		initGame((AbstractGame) map.getSerializable("game"));
+	}
 
-  public void NewGame(AbstractGame game) {
-    initGame(game);
-    invalidate();
-  }
+	public void NewGame(AbstractGame game) {
+		initGame(game);
+		invalidate();
+	}
 
-  public void undoMove() {
-    game.undoMove();
-    invalidate();
-  }
+	public void undoMove() {
+		game.undoMove();
+		invalidate();
+	}
 
-  public boolean canUndo() {
-    return game.canUndo();
-  }
+	public boolean canUndo() {
+		return game.canUndo();
+	}
 }
