@@ -217,15 +217,19 @@ public class GameCore implements Serializable {
 	  destSquare.setPiece(srcSquare.getPiece());
 	  srcSquare.setEmptySquare();
 	  
-	  clearValidMovePieces();
-	  // If there are more jump squares for this piece, the current player still plays, otherwise we switch players.
+	  // If there are more jump squares for this piece, the current player still
+	  // plays, otherwise we switch players.
 	  if (maybeAddValidJumpSquares(destSquare, jumpSquares)) {
 	    moveStack.peek().setSwitchPlayer(false);
+	    // We add the square to movePieces since this is the only valid move that
+	    // is available until we are out of moveAgainMode.
 	    if (!isMoveAgainMode()) {
 	    	moveAgainMode = true;
 	    	// We can kill more so set moveAgainMode to true.
 	    	moveStack.peek().setFlipMoveAgainMode(true);
 	    }
+	    clearValidMovePieces();
+	    movePieces.add(destSquare);
 	  } else {
 	    moveStack.peek().setSwitchPlayer(true);
 	    if (isMoveAgainMode()) {
