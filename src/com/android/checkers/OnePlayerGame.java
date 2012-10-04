@@ -31,6 +31,11 @@ public class OnePlayerGame extends AbstractGame {
 		doPlayerMove(x, y);
 		while (player != gameCore.getCurrentPlayer()) {
 			if (!bot.playBotMove()) {
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 				// There are no more valid moves that the bot can make.
 				break;
 			}
