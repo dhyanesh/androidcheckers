@@ -49,6 +49,22 @@ public class BitBoard {
 		this.blackPieces = blackPieces;
 	}
 	
+	// TODO(dhyanesh): Replace all code with BitBoard to avoid to have to do this.
+	public void UpdateBoard(Board board) {
+		for (int i = 0; i < board.size(); ++i) {
+			for (int j = 0; j < board.size(); ++j) {
+				Square square = board.getSquare(i, j);
+				if (isWhitePieceAtIndex(i, j)) {
+					square.setPiece(Piece.getWhitePiece());
+				} else if (isBlackPieceAtIndex(i, j)) {
+					square.setPiece(Piece.getBlackPiece());
+				} else {
+					square.setEmptySquare();
+				}
+			}
+		}
+	}
+	
 	public int getWhitePieces() {
 		return whitePieces;
 	}
@@ -62,12 +78,25 @@ public class BitBoard {
 		this.blackPieces = blackPieces;
 	}
 	
+	private boolean isWhitePieceAtIndex(int x, int y) {
+		return (whitePieces & getBitMaskForSquare(x, y)) != 0;
+	}
+	
+	private boolean isBlackPieceAtIndex(int x, int y) {
+		return (blackPieces & getBitMaskForSquare(x, y)) != 0;
+		
+	}
+	
 	private void setWhitePieceAtIndex(int x, int y) {
-		whitePieces |= (1 << getBitIndexForSquare(x, y));
+		whitePieces |= getBitMaskForSquare(x, y);
 	}
 	
 	private void setBlackPieceAtIndex(int x, int y) {
-		blackPieces |= (1 << getBitIndexForSquare(x, y));
+		blackPieces |= getBitMaskForSquare(x, y);
+	}
+	
+	private int getBitMaskForSquare(int x, int y) {
+		return (1 << getBitIndexForSquare(x, y));
 	}
 	
 	private int getBitIndexForSquare(int x, int y) {

@@ -13,5 +13,7 @@ public abstract class AbstractBot {
 	public AbstractBot(GameCore gameCore) {
 		this.gameCore = gameCore;
 	}
+	
+	// Should return true if there was a valid  move made.
 	public abstract boolean playBotMove();
 }
