@@ -4,7 +4,6 @@
 package com.android.checkers;
 
 import static org.junit.Assert.*;
-import junit.framework.Assert;
 
 import org.junit.Test;
 
@@ -21,11 +20,8 @@ public class BitBoardTest {
 	public void testBitBoardBoard() {
 		Board board = new Board();
 		BitBoard bitBoard = new BitBoard(board);
-		assertEquals(0, bitBoard.getWhitePieces());
-		assertEquals(0, bitBoard.getBlackPieces());
-		
-		bitBoard.UpdateBoard(board);
-		assertEquals(board, new Board());
+		assertEquals(0xfff, bitBoard.getWhitePieces());
+		assertEquals(0xfff00000, bitBoard.getBlackPieces());
 	}
 
 	/**
@@ -33,7 +29,13 @@ public class BitBoardTest {
 	 */
 	@Test
 	public void testUpdateBoard() {
+		BitBoard bitBoard = new BitBoard();
+		bitBoard.setWhitePieces(0xfff);
+		bitBoard.setBlackPieces(0xfff00000);
 		
+		Board board = new Board();
+		bitBoard.UpdateBoard(board);
+		assertTrue(board.equals(new Board()));
 	}
 
 }
