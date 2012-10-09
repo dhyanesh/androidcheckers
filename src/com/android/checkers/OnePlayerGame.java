@@ -1,5 +1,7 @@
 package com.android.checkers;
 
+import android.util.Log;
+
 /**
  * @author dhyanesh
  * 
@@ -29,7 +31,9 @@ public class OnePlayerGame extends AbstractGame {
 	@Override
 	public void doMove(int x, int y) {
 		doPlayerMove(x, y);
+		Log.i("OnePlayerGame", "Player move done.");
 		while (player != gameCore.getCurrentPlayer()) {
+			Log.i("OnePlayerGame", "Starting bot move.");
 			if (!bot.playBotMove()) {
 				try {
 					Thread.sleep(1000);
@@ -40,5 +44,6 @@ public class OnePlayerGame extends AbstractGame {
 				break;
 			}
 		}
+		Log.i("OnePlayerGame", "Done bot moves.");
 	}
 }

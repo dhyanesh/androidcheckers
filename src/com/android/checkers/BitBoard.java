@@ -3,6 +3,8 @@
  */
 package com.android.checkers;
 
+import android.util.Log;
+
 /**
  * @author dhyanesh
  *
@@ -44,6 +46,12 @@ public class BitBoard {
 		}
 	}
 	
+	@Override
+	public String toString() {
+		return "BitBoard [whitePieces=" + Integer.toHexString(whitePieces) + ", blackPieces="
+				+ Integer.toHexString(blackPieces) + "]";
+	}
+
 	public BitBoard(int whitePieces, int blackPieces) {
 		this.whitePieces = whitePieces;
 		this.blackPieces = blackPieces;
@@ -51,14 +59,18 @@ public class BitBoard {
 	
 	// TODO(dhyanesh): Replace all code with BitBoard to avoid to have to do this.
 	public void UpdateBoard(Board board) {
+		Log.i("BitBoard", toString());
 		for (int i = 0; i < board.size(); ++i) {
 			for (int j = 0; j < board.size(); ++j) {
 				Square square = board.getSquare(i, j);
 				if (isWhitePieceAtIndex(i, j)) {
+					Log.i("BitBoard", "White at: " + i + " " + j);
 					square.setPiece(Piece.getWhitePiece());
 				} else if (isBlackPieceAtIndex(i, j)) {
+					Log.i("BitBoard", "Black at: " + i + " " + j);
 					square.setPiece(Piece.getBlackPiece());
 				} else {
+					Log.i("BitBoard", "Empty at: " + i + " " + j);
 					square.setEmptySquare();
 				}
 			}
@@ -79,11 +91,11 @@ public class BitBoard {
 	}
 	
 	private boolean isWhitePieceAtIndex(int x, int y) {
-		return (whitePieces & getBitMaskForSquare(x, y)) != 0;
+		return Board.isBlackSquare(x, y) && (whitePieces & getBitMaskForSquare(x, y)) != 0;
 	}
 	
 	private boolean isBlackPieceAtIndex(int x, int y) {
-		return (blackPieces & getBitMaskForSquare(x, y)) != 0;
+		return Board.isBlackSquare(x, y) && (blackPieces & getBitMaskForSquare(x, y)) != 0;
 		
 	}
 	

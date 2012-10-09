@@ -3,6 +3,8 @@
  */
 package com.android.checkers;
 
+import android.util.Log;
+
 /**
  * @author dhyanesh
  *
@@ -22,13 +24,19 @@ public class NativeRandomBot extends AbstractBot {
 	
 	public boolean playBotMove() {
 		BitBoard bitBoard = new BitBoard(gameCore.getBoard());
+		Log.i("NativeRandomBot", "Before: " + bitBoard.toString());
 		moveResult = new MoveResult();
-		 if (!playNativeBotMove(bitBoard.getWhitePieces(), bitBoard.getBlackPieces(),
-				 		gameCore.getCurrentPlayer() == Player.WHITE, gameCore.isMoveAgainMode())) {
-			 return false;
-		 }
-		 
-		 return true;
+		if (!playNativeBotMove(bitBoard.getWhitePieces(), bitBoard.getBlackPieces(),
+				gameCore.getCurrentPlayer() == Player.WHITE, gameCore.isMoveAgainMode())) {
+			return false;
+		}
+
+		bitBoard.setWhitePieces(moveResult.whitePieces);
+		bitBoard.setBlackPieces(moveResult.blackPieces);
+		bitBoard.UpdateBoard(gameCore.getBoard());
+		gameCore.switchPlayer();
+		Log.i("NativeRandomBot", "After: " + bitBoard.toString());
+		return true;
 	}
 	
 	public native boolean playNativeBotMove(int whitePieces, int blackPieces,
