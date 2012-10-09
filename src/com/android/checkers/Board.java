@@ -18,7 +18,7 @@ public class Board implements Serializable {
 			for (int j = 0; j < kSize; ++j) {
 				board[i][j] = new Square(i, j);
 				if (isBlackSquare(i, j) && (j <= 2 || j >= 5)) {
-					if (j <= 2) {
+					if (j >= 5) {
 						board[i][j].setPiece(Piece.getBlackPiece());
 					} else {
 						board[i][j].setPiece(Piece.getWhitePiece());
@@ -55,6 +55,6 @@ public class Board implements Serializable {
 	 * @return
 	 */
 	public static boolean isWhiteSquare(int x, int y) {
-		return (x + y) % 2 == 0;
+		return (x + y) % 2 != 0;
 	}
 }

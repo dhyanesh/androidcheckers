@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.os.Bundle;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -103,7 +104,7 @@ public class BoardView extends View {
 			paint = blackPaint;
 		}
 		int left = xOffset + x * squareSize;
-		int top = yOffset + y * squareSize;
+		int top = yOffset + (board.size() - y - 1) * squareSize;
 		canvas.drawRect(left, top, left + squareSize, top + squareSize, paint);
 	}
 
@@ -124,7 +125,9 @@ public class BoardView extends View {
 			paint = whitePiece;
 		}
 		int cx = xOffset + x * squareSize + squareSize / 2;
-		int cy = yOffset + y * squareSize + squareSize / 2;
+		// We invert the 'y' co-ordinate so that we can print white pieces below and
+		// black pieces on top.
+		int cy = yOffset + (board.size() - y - 1) * squareSize + squareSize / 2;
 		canvas.drawCircle(cx, cy, (float) (squareSize / 2.5), paint);
 	}
 
@@ -165,8 +168,10 @@ public class BoardView extends View {
 		}
 
 		int currentX = (int) ((event.getX() - xOffset) / squareSize);
-		int currentY = (int) ((event.getY() - yOffset) / squareSize);
-
+		int currentY = board.size() - (int) ((event.getY() - yOffset) / squareSize) - 1;
+		
+		Log.i("BoardView", "" + currentX + ", " + currentY);
+		
 		new GameMoveTask().execute(this, game, currentX, currentY);
 
 		return true;

@@ -111,7 +111,7 @@ public class GameCore implements Serializable {
 	}
 
 	private int getYDirection(Square square) {
-		return square.getPiece().isBlack() ? 1 : -1;
+		return square.getPiece().isBlack() ? -1 : 1;
 	}
 
 	private boolean maybeAddValidJumpSquares(int x, int y, int xDiff, int yDiff,
@@ -137,15 +137,12 @@ public class GameCore implements Serializable {
 		int x = origin.getX();
 		int y = origin.getY();
 		int yDiff = getYDirection(origin);
-		Player oppositePlayer = Player.getOppositePlayer(origin.getPiece()
-				.getPlayer());
+		Player oppositePlayer = Player.getOppositePlayer(origin.getPiece().getPlayer());
 
 		int xDiff = 1;
-		boolean value = maybeAddValidJumpSquares(x, y, xDiff, yDiff,
-				oppositePlayer, squares);
+		boolean value = maybeAddValidJumpSquares(x, y, xDiff, yDiff, oppositePlayer, squares);
 		xDiff = -1;
-		value |= maybeAddValidJumpSquares(x, y, xDiff, yDiff, oppositePlayer,
-				squares);
+		value |= maybeAddValidJumpSquares(x, y, xDiff, yDiff, oppositePlayer, squares);
 		return value;
 	}
 
@@ -187,7 +184,7 @@ public class GameCore implements Serializable {
 		maybeAddValidMovePieces();
 	}
 
-	private void switchPlayer() {
+	public void switchPlayer() {
 		currentPlayer = Player.getOppositePlayer(currentPlayer);
 	}
 
