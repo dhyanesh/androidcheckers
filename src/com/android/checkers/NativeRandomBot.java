@@ -35,6 +35,7 @@ public class NativeRandomBot extends AbstractBot {
 		bitBoard.setBlackPieces(moveResult.blackPieces);
 		bitBoard.UpdateBoard(gameCore.getBoard());
 		gameCore.switchPlayer();
+		gameCore.computeValidMovePieces();
 		Log.i("NativeRandomBot", "After: " + bitBoard.toString());
 		return true;
 	}

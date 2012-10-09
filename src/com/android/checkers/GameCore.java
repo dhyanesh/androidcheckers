@@ -179,7 +179,7 @@ public class GameCore implements Serializable {
 		}
 	}
 
-	private void computeValidMovePieces() {
+	public void computeValidMovePieces() {
 		clearValidMovePieces();
 		maybeAddValidMovePieces();
 	}
