@@ -3,8 +3,6 @@ package com.android.checkers;
 import java.io.Serializable;
 import java.util.HashSet;
 
-import android.util.Log;
-
 public abstract class AbstractGame implements Serializable {
 
 	/**
@@ -31,7 +29,6 @@ public abstract class AbstractGame implements Serializable {
 		}
 
 		Square currentSquare = gameCore.getBoard().getSquare(x, y);
-		Log.i("AbstractGame", "" + currentSquare.toString());
 
 		// If we need to move again, we can't de-select the square.
 		if (currentSquare == selectedSquare && !gameCore.isMoveAgainMode()) {

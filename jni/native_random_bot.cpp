@@ -84,6 +84,21 @@ class BitBoard {
      return x >= 0 && x < kBoardSize && y >= 0 && y < kBoardSize;
    }
 
+   static unsigned int GetBitMaskForIndex(int x, int y) {
+     return (1 << GetBitIndexForSquare(x, y));
+   }
+
+   // Obtains the bit index for a (x, y) position on the board.
+   static int GetBitIndexForSquare(int x, int y) {
+     return y * 4 + x / 2;
+   }
+
+   // Reverse of the function above.
+   static void GetXYForBitIndex(int index, int *x, int *y) {
+     *y = index / 4;
+     *x = (index % 4) * 2 + (*y) % 2;
+   }
+
    // Returns true if the position specified by the mask is an empty square.
    bool IsEmptySquare(unsigned int position_mask) const {
      return !IsBitSet(white_piece_set_, position_mask) &&
@@ -203,21 +218,6 @@ class BitBoard {
        MaybeAppendJumpState(is_white_player, current_mask, x, y, -1, ydiff,
                             player_piece_set, opponent_piece_set, states);
      }
-   }
-
-   static unsigned int GetBitMaskForIndex(int x, int y) {
-     return (1 << GetBitIndexForSquare(x, y));
-   }
-
-   // Obtains the bit index for a (x, y) position on the board.
-   static int GetBitIndexForSquare(int x, int y) {
-     return y * 4 + x / 2;
-   }
-
-   // Reverse of the function above.
-   static void GetXYForBitIndex(int index, int *x, int *y) {
-     *y = index / 4;
-     *x = (index % 4) * 2 + (*y) % 2;
    }
 
    unsigned int white_piece_set_;
