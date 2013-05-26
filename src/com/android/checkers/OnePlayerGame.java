@@ -21,7 +21,7 @@ public class OnePlayerGame extends AbstractGame {
 	public OnePlayerGame(Player player) {
 		super();
 		this.player = player;
-		bot = new NativeRandomBot(gameCore);
+		bot = new NativeBot(gameCore);
 
 		if (player == Player.BLACK) {
 			bot.playBotMove();
