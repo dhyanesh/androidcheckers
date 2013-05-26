@@ -37,5 +37,4 @@ public class BitBoardTest {
 		bitBoard.UpdateBoard(board);
 		assertTrue(board.equals(new Board()));
 	}
-
 }
