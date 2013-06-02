@@ -47,6 +47,14 @@ class BitBoard {
      return IsPiecePresent(black_piece_set_, x, y);
    }
 
+   unsigned int NumWhitePieces() const {
+     return CountBits(white_piece_set());
+   }
+
+   unsigned int NumBlackPieces() const {
+     return CountBits(black_piece_set());
+   }
+
    void AppendNextWhiteStates(std::vector<BitBoard> *states) const {
      const bool is_white_player = true;
      AppendGameStatesForPlayer(is_white_player, states);
@@ -70,6 +78,13 @@ class BitBoard {
 
    static void SetBit(unsigned int mask, unsigned int *piece_set) {
      *piece_set |= mask;
+   }
+
+   static unsigned int CountBits(unsigned int piece_set) {
+     int count = 0;
+     for (count = 0; piece_set != 0; ++count) {
+     }
+     return count;
    }
 
    static bool IsPiecePresent(unsigned int piece_set, unsigned int mask) {
@@ -234,7 +249,8 @@ class GameCore {
  public:
   GameCore(GameState *game_state) : game_state_(game_state) { }
 
-  void AppendNextGameStates(std::vector<BitBoard> *next_states) {
+  void AppendNextGameStates(std::vector<BitBoard> *next_states) const {
+    // TODO(dhyanesh): Fix this to take into account is_move_again_mode.
     if (game_state_->is_white_player) {
       game_state_->board.AppendNextWhiteStates(next_states);
     } else {
@@ -244,6 +260,12 @@ class GameCore {
 
   void DoMove(BitBoard next_state) {
     game_state_->board = next_state;
+    // TODO(dhyanesh): Fix this to take into account is_move_again_mode.
+    game_state_->is_white_player = !game_state_->is_white_player;
+  }
+
+  const GameState &game_state() const {
+    return *game_state_;
   }
 
  private:
@@ -254,10 +276,11 @@ class BotBase {
  public:
   BotBase(GameCore *game_core) : game_core_(game_core) { }
 
+  // Plays the bot move. Returns false if no more moves are possible.
   virtual bool PlayMove() = 0;
 
  protected:
-  GameCore *game_core() {
+  GameCore *game_core() const {
     return game_core_;
   }
 
@@ -279,6 +302,33 @@ class RandomBot : public BotBase {
     game_core()->DoMove(next_states[index]);
 
     return true;
+  }
+};
+
+class MinMaxBot : public BotBase {
+ public:
+  MinMaxBot(GameCore *game_core) : BotBase(game_core) { }
+
+  virtual bool PlayMove() {
+    std::vector<BitBoard> next_states;
+    game_core()->AppendNextGameStates(&next_states);
+
+    if (next_states.empty()) return false;
+
+    int index = FindBestMove(next_states);
+
+    game_core()->DoMove(next_states[index]);
+
+    return true;
+  }
+
+ private:
+  int GameScore() const {
+    const BitBoard &board = game_core()->game_state().board;
+    return board.NumWhitePieces() - board.NumBlackPieces();
+  }
+
+  int FindBestMove(const std::vector<BitBoard> &states) {
   }
 };
 
@@ -313,14 +363,12 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
       buf);
 
   GameCore game_core(&game_state);
-  RandomBot bot(&game_core);
-  if (!bot.PlayMove()) return false;
-
+  BotBase *bot = new RandomBot(&game_core);
+  if (!bot->PlayMove()) return false;
    jclass native_random_bot_class_id =
        environment->GetObjectClass(native_random_bot);
    if (native_random_bot_class_id == NULL) {
-      // printf("GetObjectClass returned NULL\n");
-      return false;
+     return false;
    }
 
    // Get the Java moveResult object reference.
