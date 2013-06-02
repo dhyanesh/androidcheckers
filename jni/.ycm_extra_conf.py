@@ -12,13 +12,7 @@ compilation_database_folder = ''
 # These are the compilation flags that will be used in case there's no
 # compilation database set.
 flags = [
-'-Wall',
-'-Wextra',
-'-Werror',
-'-Wc++98-compat',
-'-Wno-long-long',
-'-Wno-variadic-macros',
-'-fexceptions',
+'-fno-exceptions',
 '-DNDEBUG',
 '-DUSE_CLANG_COMPLETER',
 # THIS IS IMPORTANT! Without a "-std=<something>" flag, clang won't know which
@@ -27,33 +21,24 @@ flags = [
 # a "-std=<something>".
 # For a C project, you would set this to something like 'c99' instead of
 # 'c++11'.
-'-std=c++11',
+'-std=c++',
 # ...and the same thing goes for the magic -x option which specifies the
 # language that the files to be compiled are written in. This is mostly
 # relevant for c++ headers.
 # For a C project, you would set this to 'c' instead of 'c++'.
-'-x',
-'c++',
-'-isystem',
-'../BoostParts',
-'-isystem',
-# This path will only work on OS X, but extra paths that don't exist are not
-# harmful
-'/System/Library/Frameworks/Python.framework/Headers',
-'-isystem',
-'../llvm/include',
-'-isystem',
-'../llvm/tools/clang/include',
-'-I',
-'.',
-'-isystem',
-'./tests/gmock/gtest',
-'-isystem',
-'./tests/gmock/gtest/include',
-'-isystem',
-'./tests/gmock',
-'-isystem',
-'./tests/gmock/include'
+'-x', 'c++',
+'-I', '.',
+# Android SDK flags.
+'-DANDROID',
+'-I', '/Users/dhyanesh/dev/android-ndk-r8b/sources/cxx-stl/gnu-libstdc++/4.6/include',
+'-I', '/Users/dhyanesh/dev/android-ndk-r8b/sources/cxx-stl/gnu-libstdc++/4.6/libs/armeabi/include',
+'-I', '/Users/dhyanesh/dev/eclipse/androidcheckers/jni',
+'-I', '/Users/dhyanesh/dev/android-ndk-r8b/platforms/android-14/arch-arm/usr/include',
+# Gunit paths.
+'-isystem', './tests/gmock/gtest',
+'-isystem', './tests/gmock/gtest/include',
+'-isystem', './tests/gmock',
+'-isystem', './tests/gmock/include',
 ]
 
 if compilation_database_folder:
