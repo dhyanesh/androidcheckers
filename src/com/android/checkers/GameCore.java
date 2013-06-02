@@ -96,6 +96,10 @@ public class GameCore implements Serializable {
 		return moveAgainMode;
 	}
 
+	public void setMoveAgainMode(boolean moveAgainMode) {
+		this.moveAgainMode = moveAgainMode;
+	}
+
 	private void clearValidMovePieces() {
 		movePieces.clear();
 	}

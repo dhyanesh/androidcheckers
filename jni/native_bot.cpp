@@ -55,14 +55,28 @@ class BitBoard {
      return CountBits(black_piece_set());
    }
 
-   void AppendNextWhiteStates(std::vector<BitBoard> *states) const {
+   void AppendNextWhiteMoveStates(std::vector<BitBoard> *states) const {
+     const bool move_states = true;
      const bool is_white_player = true;
-     AppendGameStatesForPlayer(is_white_player, states);
+     AppendGameStatesForPlayer(move_states, is_white_player, states);
    }
 
-   void AppendNextBlackStates(std::vector<BitBoard> *states) const {
+   void AppendNextWhiteJumpStates(std::vector<BitBoard> *states) const {
+     const bool move_states = false;
+     const bool is_white_player = true;
+     AppendGameStatesForPlayer(move_states, is_white_player, states);
+   }
+
+   void AppendNextBlackMoveStates(std::vector<BitBoard> *states) const {
+     const bool move_states = true;
      const bool is_white_player = false;
-     AppendGameStatesForPlayer(is_white_player, states);
+     AppendGameStatesForPlayer(move_states, is_white_player, states);
+   }
+
+   void AppendNextBlackJumpStates(std::vector<BitBoard> *states) const {
+     const bool move_states = false;
+     const bool is_white_player = false;
+     AppendGameStatesForPlayer(move_states, is_white_player, states);
    }
 
  private:
@@ -121,14 +135,14 @@ class BitBoard {
    }
 
    // Returns the piece set modified by moving a piece in current_piece_set
-   // from a position indicated by current_mask to a position indicated by
+   // from a position indicated by position_mask to a position indicated by
    // next_move_mask.
-   unsigned int GetNextPieceSetForMove(unsigned int current_mask,
+   unsigned int GetNextPieceSetForMove(unsigned int position_mask,
                                        unsigned int next_move_mask,
                                        unsigned int current_piece_set) const {
      unsigned int next_piece_set = current_piece_set;
      // Clear the bit for the current position mask.
-     ClearBit(current_mask, &next_piece_set);
+     ClearBit(position_mask, &next_piece_set);
      // Set it for the next position mask.
      SetBit(next_move_mask, &next_piece_set);
      return next_piece_set;
@@ -137,7 +151,7 @@ class BitBoard {
    // Creates a new move state for (x, y) if there exists a valid move for it
    // and appends it to 'states'.
    void MaybeAppendMoveState(const bool is_white_player,
-                             const unsigned int current_mask,
+                             const unsigned int position_mask,
                              const int x, const int y,
                              unsigned int current_piece_set,
                              std::vector<BitBoard> *states) const {
@@ -149,7 +163,7 @@ class BitBoard {
      if (!IsEmptySquare(next_move_mask)) return;
 
      unsigned int next_piece_set =
-         GetNextPieceSetForMove(current_mask,
+         GetNextPieceSetForMove(position_mask,
                                 next_move_mask,
                                 current_piece_set);
 
@@ -164,7 +178,7 @@ class BitBoard {
    // (xdiff, ydiff) if there exists a valid jump for it and appends it to
    // 'states'.
    void MaybeAppendJumpState(const bool is_white_player,
-                             const unsigned int current_mask,
+                             const unsigned int position_mask,
                              const int x, const int y,
                              const int xdiff, const int ydiff,
                              unsigned int player_piece_set,
@@ -187,7 +201,7 @@ class BitBoard {
      if (!IsEmptySquare(next_move_mask)) return;
 
      unsigned int next_player_piece_set =
-         GetNextPieceSetForMove(current_mask,
+         GetNextPieceSetForMove(position_mask,
                                 next_move_mask,
                                 player_piece_set);
 
@@ -202,7 +216,8 @@ class BitBoard {
    }
 
    // Appends the next possible game states for the player.
-   void AppendGameStatesForPlayer(const bool is_white_player,
+   void AppendGameStatesForPlayer(const bool move_states,
+                                  const bool is_white_player,
                                   std::vector<BitBoard> *states) const {
      int ydiff;
      unsigned int player_piece_set;
@@ -217,21 +232,24 @@ class BitBoard {
        ydiff = -1;
      }
 
-     unsigned int current_mask = 1;
-     for (int i = 0; i < 32; ++i, current_mask <<= 1) {
-       if (!IsBitSet(player_piece_set, current_mask)) continue;
+     unsigned int position_mask = 1;
+     for (int i = 0; i < 32; ++i, position_mask <<= 1) {
+       if (!IsBitSet(player_piece_set, position_mask)) continue;
 
        int x, y;
        GetXYForBitIndex(i, &x, &y);
 
-       MaybeAppendMoveState(is_white_player, current_mask, x + 1, y + ydiff,
-                            player_piece_set, states);
-       MaybeAppendMoveState(is_white_player, current_mask, x - 1, y + ydiff,
-                            player_piece_set, states);
-       MaybeAppendJumpState(is_white_player, current_mask, x, y, 1, ydiff,
-                            player_piece_set, opponent_piece_set, states);
-       MaybeAppendJumpState(is_white_player, current_mask, x, y, -1, ydiff,
-                            player_piece_set, opponent_piece_set, states);
+       if (move_states) {
+         MaybeAppendMoveState(is_white_player, position_mask, x + 1, y + ydiff,
+             player_piece_set, states);
+         MaybeAppendMoveState(is_white_player, position_mask, x - 1, y + ydiff,
+             player_piece_set, states);
+       } else {
+         MaybeAppendJumpState(is_white_player, position_mask, x, y, 1, ydiff,
+             player_piece_set, opponent_piece_set, states);
+         MaybeAppendJumpState(is_white_player, position_mask, x, y, -1, ydiff,
+             player_piece_set, opponent_piece_set, states);
+       }
      }
    }
 
@@ -249,19 +267,71 @@ class GameCore {
  public:
   GameCore(GameState *game_state) : game_state_(game_state) { }
 
-  void AppendNextGameStates(std::vector<BitBoard> *next_states) const {
-    // TODO(dhyanesh): Fix this to take into account is_move_again_mode.
+  void AppendNextGameStates(std::vector<GameState> *next_states) const {
+    std::vector<BitBoard> next_boards;
     if (game_state_->is_white_player) {
-      game_state_->board.AppendNextWhiteStates(next_states);
+      if (!game_state_->is_move_again_mode) {
+        game_state_->board.AppendNextWhiteMoveStates(&next_boards);
+        AppendNextMoveStates(next_boards, next_states);
+      }
+      next_boards.clear();
+
+      game_state_->board.AppendNextWhiteJumpStates(&next_boards);
+      AppendNextJumpStates(next_boards, next_states);
     } else {
-      game_state_->board.AppendNextBlackStates(next_states);
+      if (!game_state_->is_move_again_mode) {
+        game_state_->board.AppendNextBlackMoveStates(&next_boards);
+        AppendNextMoveStates(next_boards, next_states);
+      }
+
+      next_boards.clear();
+      game_state_->board.AppendNextBlackJumpStates(&next_boards);
+      AppendNextJumpStates(next_boards, next_states);
     }
   }
 
-  void DoMove(BitBoard next_state) {
-    game_state_->board = next_state;
-    // TODO(dhyanesh): Fix this to take into account is_move_again_mode.
-    game_state_->is_white_player = !game_state_->is_white_player;
+  void AppendNextMoveStates(const std::vector<BitBoard> &next_boards,
+                            std::vector<GameState> *next_states) const {
+    next_states->reserve(next_states->size() + next_boards.size());
+    for (int i = 0; i < next_boards.size(); ++i) {
+      next_states->push_back(GameState());
+
+      GameState &state = next_states->back();
+      state.board = next_boards[i];
+      state.is_move_again_mode = false;
+      state.is_white_player = !game_state_->is_white_player;
+    }
+  }
+
+  void AppendNextJumpStates(const std::vector<BitBoard> &next_boards,
+                            std::vector<GameState> *next_states) const {
+    next_states->reserve(next_states->size() + next_boards.size());
+    for (int i = 0; i < next_boards.size(); ++i) {
+      next_states->push_back(GameState());
+
+      GameState &state = next_states->back();
+      state.board = next_boards[i];
+      state.is_move_again_mode = HasJumpStates(state.board,
+                                               game_state_->is_white_player);
+      state.is_white_player = state.is_move_again_mode ?
+        game_state_->is_white_player : !game_state_->is_white_player;
+    }
+  }
+
+  bool HasJumpStates(BitBoard board, bool is_white_player) const {
+    // TODO(dhyanesh): This is not entirely accurate. We need to check jump
+    // states only from the last jump move.
+    std::vector<BitBoard> states;
+    if (is_white_player) {
+      board.AppendNextWhiteJumpStates(&states);
+    } else {
+      board.AppendNextBlackJumpStates(&states);
+    }
+    return states.size() > 0;
+  }
+
+  void DoMove(const GameState &next_state) {
+    *game_state_ = next_state;
   }
 
   const GameState &game_state() const {
@@ -293,7 +363,7 @@ class RandomBot : public BotBase {
   RandomBot(GameCore *game_core) : BotBase(game_core) { }
 
   virtual bool PlayMove() {
-    std::vector<BitBoard> next_states;
+    std::vector<GameState> next_states;
     game_core()->AppendNextGameStates(&next_states);
 
     if (next_states.empty()) return false;
@@ -310,12 +380,14 @@ class MinMaxBot : public BotBase {
   MinMaxBot(GameCore *game_core) : BotBase(game_core) { }
 
   virtual bool PlayMove() {
-    std::vector<BitBoard> next_states;
+    std::vector<GameState> next_states;
     game_core()->AppendNextGameStates(&next_states);
 
     if (next_states.empty()) return false;
 
-    int index = FindBestMove(next_states);
+    int index = FindBestMove(next_states,
+                             game_core()->game_state().is_white_player,
+                             0);
 
     game_core()->DoMove(next_states[index]);
 
@@ -323,12 +395,23 @@ class MinMaxBot : public BotBase {
   }
 
  private:
-  int GameScore() const {
-    const BitBoard &board = game_core()->game_state().board;
+  // Returns the absolute score of the passed in board.
+  static int GameScore(const BitBoard &board) {
     return board.NumWhitePieces() - board.NumBlackPieces();
   }
 
-  int FindBestMove(const std::vector<BitBoard> &states) {
+  int FindBestMove(const std::vector<GameState> &states,
+                   const bool is_white_player,
+                   int depth) {
+    static const int kMaxDepth = 3;
+    int best = 0;
+    int best_score = is_white_player ? -50 : 50;
+    for (int i = 1; i < states.size(); ++i) {
+      if (depth == kMaxDepth) {
+        best_score = GameScore(states[i].board);
+      }
+    }
+    return best;
   }
 };
 
@@ -389,6 +472,11 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
        move_result_class_id, "blackPieces", "I");
    environment->SetIntField(move_result, black_pieces_field_id,
                             game_state.board.black_piece_set());
+
+   jfieldID move_again_mode_field_id = environment->GetFieldID(
+       move_result_class_id, "isMoveAgainMode", "Z");
+   environment->SetBooleanField(move_result, move_again_mode_field_id,
+                                game_state.is_move_again_mode);
 
   return true;
 }
