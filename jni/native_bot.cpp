@@ -380,38 +380,65 @@ class MinMaxBot : public BotBase {
   MinMaxBot(GameCore *game_core) : BotBase(game_core) { }
 
   virtual bool PlayMove() {
-    std::vector<GameState> next_states;
-    game_core()->AppendNextGameStates(&next_states);
+    Result result = FindBestMove(game_core()->game_state(), 0);
+    if (result.final_score == 50 || result.final_score == 50) return false;
 
-    if (next_states.empty()) return false;
-
-    int index = FindBestMove(next_states,
-                             game_core()->game_state().is_white_player,
-                             0);
-
-    game_core()->DoMove(next_states[index]);
+    game_core()->DoMove(result.game_state);
 
     return true;
   }
 
  private:
+  struct Result {
+    GameState game_state;
+    int final_score;
+  };
+
   // Returns the absolute score of the passed in board.
   static int GameScore(const BitBoard &board) {
     return board.NumWhitePieces() - board.NumBlackPieces();
   }
 
-  int FindBestMove(const std::vector<GameState> &states,
-                   const bool is_white_player,
-                   int depth) {
+  Result FindBestMove(const GameState &game_state, int depth) {
     static const int kMaxDepth = 3;
-    int best = 0;
-    int best_score = is_white_player ? -50 : 50;
-    for (int i = 1; i < states.size(); ++i) {
+
+    std::vector<GameState> next_states;
+    GameCore core(&game_state);
+    core.AppendNextGameStates(&next_states);
+
+    Result best_result;
+    best_result.final_score = game_state.is_white_player ? -50 : 50;
+
+    for (int i = 0; i < next_states.size(); ++i) {
+      const GameState &state = next_states[i];
       if (depth == kMaxDepth) {
-        best_score = GameScore(states[i].board);
+        int score = GameScore(state.board);
+        if (game_state.is_white_player) {
+          if (score > best_result.final_score) {
+            best_result.game_state = state;
+            best_result.final_score = score;
+          }
+        } else {
+          if (score < best_result.final_score) {
+            best_result.game_state = state;
+            best_result.final_score = score;
+          }
+        }
+      } else {
+        Result next_result = FindBestMove(state, depth + 1);
+        if (game_state.is_white_player) {
+          if (next_result.final_score > best_result.final_score) {
+            best_result = next_result;
+          }
+        } else {
+          if (next_result.final_score < best_result.final_score) {
+            best_result = next_result;
+          }
+        }
       }
     }
-    return best;
+
+    return best_result;
   }
 };
 
@@ -448,35 +475,36 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
   GameCore game_core(&game_state);
   BotBase *bot = new RandomBot(&game_core);
   if (!bot->PlayMove()) return false;
-   jclass native_random_bot_class_id =
-       environment->GetObjectClass(native_random_bot);
-   if (native_random_bot_class_id == NULL) {
+
+  jclass native_random_bot_class_id =
+    environment->GetObjectClass(native_random_bot);
+  if (native_random_bot_class_id == NULL) {
      return false;
-   }
+  }
 
-   // Get the Java moveResult object reference.
-   jfieldID move_result_field_id = environment->GetFieldID(
-       native_random_bot_class_id, "moveResult",
-       "Lcom/android/checkers/NativeBot$MoveResult;");
-   jobject move_result =
-       environment->GetObjectField(native_random_bot, move_result_field_id);
+  // Get the Java moveResult object reference.
+  jfieldID move_result_field_id = environment->GetFieldID(
+      native_random_bot_class_id, "moveResult",
+      "Lcom/android/checkers/NativeBot$MoveResult;");
+  jobject move_result =
+    environment->GetObjectField(native_random_bot, move_result_field_id);
 
-   jclass move_result_class_id = environment->GetObjectClass(move_result);
+  jclass move_result_class_id = environment->GetObjectClass(move_result);
 
-   jfieldID white_pieces_field_id = environment->GetFieldID(
-       move_result_class_id, "whitePieces", "I");
-   environment->SetIntField(move_result, white_pieces_field_id,
-                            game_state.board.white_piece_set());
+  jfieldID white_pieces_field_id = environment->GetFieldID(
+      move_result_class_id, "whitePieces", "I");
+  environment->SetIntField(move_result, white_pieces_field_id,
+      game_state.board.white_piece_set());
 
-   jfieldID black_pieces_field_id = environment->GetFieldID(
-       move_result_class_id, "blackPieces", "I");
-   environment->SetIntField(move_result, black_pieces_field_id,
-                            game_state.board.black_piece_set());
+  jfieldID black_pieces_field_id = environment->GetFieldID(
+      move_result_class_id, "blackPieces", "I");
+  environment->SetIntField(move_result, black_pieces_field_id,
+      game_state.board.black_piece_set());
 
-   jfieldID move_again_mode_field_id = environment->GetFieldID(
-       move_result_class_id, "isMoveAgainMode", "Z");
-   environment->SetBooleanField(move_result, move_again_mode_field_id,
-                                game_state.is_move_again_mode);
+  jfieldID move_again_mode_field_id = environment->GetFieldID(
+      move_result_class_id, "isMoveAgainMode", "Z");
+  environment->SetBooleanField(move_result, move_again_mode_field_id,
+      game_state.is_move_again_mode);
 
   return true;
 }
