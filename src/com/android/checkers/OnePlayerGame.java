@@ -40,6 +40,7 @@ public class OnePlayerGame extends AbstractGame {
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
+				Log.i("OnePlayerGame", "No more valid bot moves.");
 				// There are no more valid moves that the bot can make.
 				break;
 			}

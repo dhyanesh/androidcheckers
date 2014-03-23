@@ -97,6 +97,7 @@ class BitBoard {
    static unsigned int CountBits(unsigned int piece_set) {
      int count = 0;
      for (count = 0; piece_set != 0; ++count) {
+       piece_set &= (piece_set - 1);
      }
      return count;
    }
@@ -338,6 +339,10 @@ class GameCore {
     return *game_state_;
   }
 
+  GameState &game_state() {
+    return *game_state_;
+  }
+
  private:
   GameState *game_state_;
 };
@@ -381,7 +386,7 @@ class MinMaxBot : public BotBase {
 
   virtual bool PlayMove() {
     Result result = FindBestMove(game_core()->game_state(), 0);
-    if (result.final_score == 50 || result.final_score == 50) return false;
+    if (result.final_score == 50 || result.final_score == -50) return false;
 
     game_core()->DoMove(result.game_state);
 
@@ -399,7 +404,7 @@ class MinMaxBot : public BotBase {
     return board.NumWhitePieces() - board.NumBlackPieces();
   }
 
-  Result FindBestMove(const GameState &game_state, int depth) {
+  Result FindBestMove(GameState &game_state, int depth) {
     static const int kMaxDepth = 3;
 
     std::vector<GameState> next_states;
@@ -409,8 +414,18 @@ class MinMaxBot : public BotBase {
     Result best_result;
     best_result.final_score = game_state.is_white_player ? -50 : 50;
 
+    char buf[200];
+    snprintf(buf, sizeof(buf),
+        "Evaluating state at depth: %d state:(%x, %x)), states to eval: %d",
+        depth,
+        game_state.board.white_piece_set(),
+        game_state.board.black_piece_set(),
+        next_states.size());
+  __android_log_print(ANDROID_LOG_INFO, "native_bot.cc",
+      buf);
+
     for (int i = 0; i < next_states.size(); ++i) {
-      const GameState &state = next_states[i];
+      GameState &state = next_states[i];
       if (depth == kMaxDepth) {
         int score = GameScore(state.board);
         if (game_state.is_white_player) {
@@ -428,16 +443,25 @@ class MinMaxBot : public BotBase {
         Result next_result = FindBestMove(state, depth + 1);
         if (game_state.is_white_player) {
           if (next_result.final_score > best_result.final_score) {
-            best_result = next_result;
+            best_result.final_score = next_result.final_score;
+            best_result.game_state = state;
           }
         } else {
           if (next_result.final_score < best_result.final_score) {
-            best_result = next_result;
+            best_result.final_score = next_result.final_score;
+            best_result.game_state = state;
           }
         }
       }
     }
 
+    snprintf(buf, sizeof(buf),
+        "Returning result at depth: %d state:(%x, %x))",
+        depth,
+        best_result.game_state.board.white_piece_set(),
+        best_result.game_state.board.black_piece_set());
+    __android_log_print(ANDROID_LOG_INFO, "native_bot.cc",
+        buf);
     return best_result;
   }
 };
@@ -473,7 +497,7 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
       buf);
 
   GameCore game_core(&game_state);
-  BotBase *bot = new RandomBot(&game_core);
+  BotBase *bot = new MinMaxBot(&game_core);
   if (!bot->PlayMove()) return false;
 
   jclass native_random_bot_class_id =
