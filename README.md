@@ -1,0 +1,4 @@
+androidcheckers
+===============
+
+Checkers for Android
