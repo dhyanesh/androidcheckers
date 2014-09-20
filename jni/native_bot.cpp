@@ -9,11 +9,152 @@
 //  # 04 # 05 # 06 # 07
 //  00 # 01 # 02 # 03 #
 //
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
 #include <jni.h>
 #include <android/log.h>
+
+// Obtains the bit index for a (x, y) position on the board.
+inline int GetBitIndexForSquare(int x, int y) {
+ return y * 4 + x / 2;
+}
+
+// Reverse of the function above.
+inline void GetXYForBitIndex(int index, int *x, int *y) {
+ *y = index / 4;
+ *x = (index % 4) * 2 + (*y) % 2;
+}
+
+inline unsigned int GetPositionMaskForIndex(int x, int y) {
+ return (1 << GetBitIndexForSquare(x, y));
+}
+
+struct Position {
+  int x, y;
+
+  unsigned int GetPositionMask() const {
+    return GetPositionMaskForIndex(x, y);
+  }
+};
+
+void IncrementPosition(Position *position) {
+  position->x += 2;
+  if (position->x >= 8) {
+    ++position->y;
+    position->x = position->y % 2;
+  }
+}
+
+inline void GetPositionForBitIndex(int index, Position *position) {
+  GetXYForBitIndex(index, position->x, position->y);
+};
+
+struct Move {
+  Move() { }
+  Move(const Position &st, const Postion &en)
+      : start(st), end(en) { }
+
+  bool IsJumpMove() const {
+    return abs(end.x - start.x) == 2;
+  }
+
+  Position start;
+  Position end;
+};
+
+class MoveGenerator {
+ public:
+   explicit MoveGenerator(const BitBoard &bitboard)
+      : bitboard_(bitboard) { }
+
+   void AddNextMoves(
+       const bool is_white_player,
+       std::vector<Move> *moves) const {
+     if (is_white_player) {
+       player_piece_set_ = bitboard_.white_piece_set();
+       opponent_piece_set_ = bitboard_.black_piece_set();
+       ydiff_ = 1;
+     } else {
+       player_piece_set_ = bitboard_.black_piece_set();
+       opponent_piece_set_ = bitboard_.white_piece_set();
+       ydiff_ = -1;
+     }
+
+     unsigned int position_mask = 1;
+     Position position;
+     position.x = 0;
+     position.y = 0;
+     for (; position.y < 8; IncrementPosition(&position), position_mask <<= 1) {
+       assert(position_mask == position.GetPositionMask());
+
+       if (!IsPiecePresent(player_piece_set_, position_mask)) continue;
+
+       AddSimpleMovesFromPosition(position, moves);
+       AddJumpMovesFromPosition(position, moves);
+     }
+   }
+
+ private:
+   bool CanMoveToPosition(const Position &position) {
+     return bitboard_.IsWithinBoard(position) &&
+         !bitboard_.IsEmptySquare(position);
+   }
+
+   void MaybeAddSimpleMove(
+       const Move &move, std::vector<Move> *moves) {
+     if (CanMoveToPosition(move)) {
+       moves->push_back(move);
+     }
+   }
+
+   void AddSimpleMovesFromPosition(Position position,
+                                   std::vector<Move> *moves) const {
+     Move move;
+     move.start = position;
+
+     move.end.x = move.start.x + 1;
+     move.end.y = move.start.y + ydiff_;
+     MaybeAddSimpleMove(move, moves);
+
+     move.end.x = move.start.x - 1;
+     move.end.y = move.start.y + ydiff_;
+     MaybeAddSimpleMove(move, moves);
+   }
+
+   void MaybeAddJump(
+       const Position &start, int xdiff, std::vector<Move> *moves) {
+     Position kill;
+     kill.x = start.x + xdiff;
+     kill.y = start.y + ydiff_;
+
+     Position end;
+     end.x = kill.x + xdiff;
+     end.y = kill.y + ydiff_;
+
+     if (!CanMoveToPosition(end)) return;
+
+     // We need an opponent piece at the kill position.
+     if (!bitboard_.IsPiecePresent(
+           opponent_piece_set, kill.GetPositionMask())) {
+       return;
+     }
+
+     moves->push_back(Move(start, end));
+   }
+
+   void AddJumpMovesFromPosition(Position position,
+                                 std::vector<Move> *moves) const {
+     MaybeAddJump(position, 1, moves);
+     MaybeAddJump(position, -1, moves);
+   }
+
+   const Bitboard &bitboard_;
+   unsigned int player_piece_set_;
+   unsigned int opponent_piece_set_;
+   int ydiff_;
+};
 
 class BitBoard {
  public:
@@ -82,16 +223,17 @@ class BitBoard {
  private:
    static const int kBoardSize = 8;
 
-   static bool IsBitSet(unsigned int piece_set, unsigned int mask) {
-     return (piece_set & mask) != 0;
+   static bool IsPiecePresent(unsigned int piece_set,
+                              unsigned int position_mask) {
+     return (piece_set & position_mask) != 0;
    }
 
-   static void ClearBit(unsigned int mask, unsigned int *piece_set) {
-     *piece_set &= ~mask;
+   static void ClearPiece(unsigned int position_mask, unsigned int *piece_set) {
+     *piece_set &= ~position_mask;
    }
 
-   static void SetBit(unsigned int mask, unsigned int *piece_set) {
-     *piece_set |= mask;
+   static void SetPiece(unsigned int position_mask, unsigned int *piece_set) {
+     *piece_set |= position_mask;
    }
 
    static unsigned int CountBits(unsigned int piece_set) {
@@ -102,10 +244,6 @@ class BitBoard {
      return count;
    }
 
-   static bool IsPiecePresent(unsigned int piece_set, unsigned int mask) {
-     return IsBitSet(piece_set, mask);
-   }
-
    static bool IsPiecePresent(unsigned int piece_set, int x, int y) {
      return IsPiecePresent(piece_set, GetBitMaskForIndex(x, y));
    }
@@ -114,25 +252,14 @@ class BitBoard {
      return x >= 0 && x < kBoardSize && y >= 0 && y < kBoardSize;
    }
 
-   static unsigned int GetBitMaskForIndex(int x, int y) {
-     return (1 << GetBitIndexForSquare(x, y));
-   }
-
-   // Obtains the bit index for a (x, y) position on the board.
-   static int GetBitIndexForSquare(int x, int y) {
-     return y * 4 + x / 2;
-   }
-
-   // Reverse of the function above.
-   static void GetXYForBitIndex(int index, int *x, int *y) {
-     *y = index / 4;
-     *x = (index % 4) * 2 + (*y) % 2;
+   static bool IsWithinBoard(Position position) {
+     return IsWithinBoard(position.x, position.y);
    }
 
    // Returns true if the position specified by the mask is an empty square.
    bool IsEmptySquare(unsigned int position_mask) const {
-     return !IsBitSet(white_piece_set_, position_mask) &&
-       !IsBitSet(black_piece_set_, position_mask);
+     return !IsPiecePresent(white_piece_set_, position_mask) &&
+       !IsPiecePresent(black_piece_set_, position_mask);
    }
 
    // Returns the piece set modified by moving a piece in current_piece_set
@@ -143,9 +270,9 @@ class BitBoard {
                                        unsigned int current_piece_set) const {
      unsigned int next_piece_set = current_piece_set;
      // Clear the bit for the current position mask.
-     ClearBit(position_mask, &next_piece_set);
+     ClearPiece(position_mask, &next_piece_set);
      // Set it for the next position mask.
-     SetBit(next_move_mask, &next_piece_set);
+     SetPiece(next_move_mask, &next_piece_set);
      return next_piece_set;
    }
 
@@ -185,11 +312,11 @@ class BitBoard {
                              unsigned int player_piece_set,
                              unsigned int opponent_piece_set,
                              std::vector<BitBoard> *states) const {
-     // Return if the destination is not in the board.
      const int kill_x = x + xdiff;
      const int kill_y = y + ydiff;
      const int dest_x = kill_x + xdiff;
      const int dest_y = kill_y + ydiff;
+     // Return if the destination is not in the board.
      if (!IsWithinBoard(dest_x, dest_y)) return;
 
      unsigned int kill_piece_mask = GetBitMaskForIndex(kill_x, kill_y);
@@ -207,7 +334,7 @@ class BitBoard {
                                 player_piece_set);
 
      // We also need to kill the opponent's piece at kill_piece_mask.
-     ClearBit(kill_piece_mask, &opponent_piece_set);
+     ClearPiece(kill_piece_mask, &opponent_piece_set);
 
      if (is_white_player) {
        states->push_back(BitBoard(next_player_piece_set, opponent_piece_set));
@@ -235,7 +362,7 @@ class BitBoard {
 
      unsigned int position_mask = 1;
      for (int i = 0; i < 32; ++i, position_mask <<= 1) {
-       if (!IsBitSet(player_piece_set, position_mask)) continue;
+       if (!IsPiecePresent(player_piece_set, position_mask)) continue;
 
        int x, y;
        GetXYForBitIndex(i, &x, &y);
@@ -291,6 +418,19 @@ class GameCore {
     }
   }
 
+  void DoMove(const GameState &next_state) {
+    *game_state_ = next_state;
+  }
+
+  const GameState &game_state() const {
+    return *game_state_;
+  }
+
+  GameState &game_state() {
+    return *game_state_;
+  }
+
+ private:
   void AppendNextMoveStates(const std::vector<BitBoard> &next_boards,
                             std::vector<GameState> *next_states) const {
     next_states->reserve(next_states->size() + next_boards.size());
@@ -330,20 +470,6 @@ class GameCore {
     }
     return states.size() > 0;
   }
-
-  void DoMove(const GameState &next_state) {
-    *game_state_ = next_state;
-  }
-
-  const GameState &game_state() const {
-    return *game_state_;
-  }
-
-  GameState &game_state() {
-    return *game_state_;
-  }
-
- private:
   GameState *game_state_;
 };
 
