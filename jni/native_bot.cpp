@@ -48,12 +48,12 @@ void IncrementPosition(Position *position) {
 }
 
 inline void GetPositionForBitIndex(int index, Position *position) {
-  GetXYForBitIndex(index, position->x, position->y);
+  GetXYForBitIndex(index, &position->x, &position->y);
 };
 
 struct Move {
   Move() { }
-  Move(const Position &st, const Postion &en)
+  Move(const Position &st, const Position &en)
       : start(st), end(en) { }
 
   bool IsJumpMove() const {
@@ -62,98 +62,6 @@ struct Move {
 
   Position start;
   Position end;
-};
-
-class MoveGenerator {
- public:
-   explicit MoveGenerator(const BitBoard &bitboard)
-      : bitboard_(bitboard) { }
-
-   void AddNextMoves(
-       const bool is_white_player,
-       std::vector<Move> *moves) const {
-     if (is_white_player) {
-       player_piece_set_ = bitboard_.white_piece_set();
-       opponent_piece_set_ = bitboard_.black_piece_set();
-       ydiff_ = 1;
-     } else {
-       player_piece_set_ = bitboard_.black_piece_set();
-       opponent_piece_set_ = bitboard_.white_piece_set();
-       ydiff_ = -1;
-     }
-
-     unsigned int position_mask = 1;
-     Position position;
-     position.x = 0;
-     position.y = 0;
-     for (; position.y < 8; IncrementPosition(&position), position_mask <<= 1) {
-       assert(position_mask == position.GetPositionMask());
-
-       if (!IsPiecePresent(player_piece_set_, position_mask)) continue;
-
-       AddSimpleMovesFromPosition(position, moves);
-       AddJumpMovesFromPosition(position, moves);
-     }
-   }
-
- private:
-   bool CanMoveToPosition(const Position &position) {
-     return bitboard_.IsWithinBoard(position) &&
-         !bitboard_.IsEmptySquare(position);
-   }
-
-   void MaybeAddSimpleMove(
-       const Move &move, std::vector<Move> *moves) {
-     if (CanMoveToPosition(move)) {
-       moves->push_back(move);
-     }
-   }
-
-   void AddSimpleMovesFromPosition(Position position,
-                                   std::vector<Move> *moves) const {
-     Move move;
-     move.start = position;
-
-     move.end.x = move.start.x + 1;
-     move.end.y = move.start.y + ydiff_;
-     MaybeAddSimpleMove(move, moves);
-
-     move.end.x = move.start.x - 1;
-     move.end.y = move.start.y + ydiff_;
-     MaybeAddSimpleMove(move, moves);
-   }
-
-   void MaybeAddJump(
-       const Position &start, int xdiff, std::vector<Move> *moves) {
-     Position kill;
-     kill.x = start.x + xdiff;
-     kill.y = start.y + ydiff_;
-
-     Position end;
-     end.x = kill.x + xdiff;
-     end.y = kill.y + ydiff_;
-
-     if (!CanMoveToPosition(end)) return;
-
-     // We need an opponent piece at the kill position.
-     if (!bitboard_.IsPiecePresent(
-           opponent_piece_set, kill.GetPositionMask())) {
-       return;
-     }
-
-     moves->push_back(Move(start, end));
-   }
-
-   void AddJumpMovesFromPosition(Position position,
-                                 std::vector<Move> *moves) const {
-     MaybeAddJump(position, 1, moves);
-     MaybeAddJump(position, -1, moves);
-   }
-
-   const Bitboard &bitboard_;
-   unsigned int player_piece_set_;
-   unsigned int opponent_piece_set_;
-   int ydiff_;
 };
 
 class BitBoard {
@@ -180,20 +88,22 @@ class BitBoard {
      return black_piece_set_;
    }
 
-   bool IsWhitePiece(int x, int y) const {
-     return IsPiecePresent(white_piece_set_, x, y);
-   }
-
-   bool IsBlackPiece(int x, int y) const {
-     return IsPiecePresent(black_piece_set_, x, y);
-   }
-
    unsigned int NumWhitePieces() const {
      return CountBits(white_piece_set());
    }
 
    unsigned int NumBlackPieces() const {
      return CountBits(black_piece_set());
+   }
+
+   bool IsEmptySquare(const Position &position) const {
+     return IsEmptySquare(position.GetPositionMask());
+   }
+
+   // Returns true if the position specified by the mask is an empty square.
+   bool IsEmptySquare(unsigned int position_mask) const {
+     return !IsPiecePresent(white_piece_set_, position_mask) &&
+       !IsPiecePresent(black_piece_set_, position_mask);
    }
 
    void AppendNextWhiteMoveStates(std::vector<BitBoard> *states) const {
@@ -220,6 +130,19 @@ class BitBoard {
      AppendGameStatesForPlayer(move_states, is_white_player, states);
    }
 
+   static bool IsPiecePresent(
+       unsigned int piece_set, const Position &position) {
+     return IsPiecePresent(piece_set, position.GetPositionMask());
+   }
+
+   static bool IsWithinBoard(int x, int y) {
+     return x >= 0 && x < kBoardSize && y >= 0 && y < kBoardSize;
+   }
+
+   static bool IsWithinBoard(Position position) {
+     return IsWithinBoard(position.x, position.y);
+   }
+
  private:
    static const int kBoardSize = 8;
 
@@ -242,24 +165,6 @@ class BitBoard {
        piece_set &= (piece_set - 1);
      }
      return count;
-   }
-
-   static bool IsPiecePresent(unsigned int piece_set, int x, int y) {
-     return IsPiecePresent(piece_set, GetBitMaskForIndex(x, y));
-   }
-
-   static bool IsWithinBoard(int x, int y) {
-     return x >= 0 && x < kBoardSize && y >= 0 && y < kBoardSize;
-   }
-
-   static bool IsWithinBoard(Position position) {
-     return IsWithinBoard(position.x, position.y);
-   }
-
-   // Returns true if the position specified by the mask is an empty square.
-   bool IsEmptySquare(unsigned int position_mask) const {
-     return !IsPiecePresent(white_piece_set_, position_mask) &&
-       !IsPiecePresent(black_piece_set_, position_mask);
    }
 
    // Returns the piece set modified by moving a piece in current_piece_set
@@ -285,7 +190,7 @@ class BitBoard {
                              std::vector<BitBoard> *states) const {
      // Return if not within board.
      if (!IsWithinBoard(x, y)) return;
-     unsigned int next_move_mask = GetBitMaskForIndex(x, y);
+     unsigned int next_move_mask = GetPositionMaskForIndex(x, y);
 
      // If the square is not empty, we can't move there.
      if (!IsEmptySquare(next_move_mask)) return;
@@ -319,11 +224,11 @@ class BitBoard {
      // Return if the destination is not in the board.
      if (!IsWithinBoard(dest_x, dest_y)) return;
 
-     unsigned int kill_piece_mask = GetBitMaskForIndex(kill_x, kill_y);
+     unsigned int kill_piece_mask = GetPositionMaskForIndex(kill_x, kill_y);
      // We need an opponent piece at kill_piece_mask.
      if (!IsPiecePresent(opponent_piece_set, kill_piece_mask)) return;
 
-     unsigned int next_move_mask = GetBitMaskForIndex(dest_x, dest_y);
+     unsigned int next_move_mask = GetPositionMaskForIndex(dest_x, dest_y);
 
      // If the destination square is not empty, we can't move there.
      if (!IsEmptySquare(next_move_mask)) return;
@@ -383,6 +288,98 @@ class BitBoard {
 
    unsigned int white_piece_set_;
    unsigned int black_piece_set_;
+};
+
+class MoveGenerator {
+ public:
+   explicit MoveGenerator(const BitBoard &bitboard)
+      : bitboard_(bitboard) { }
+
+   void SetPlayer(const bool is_white_player) {
+     if (is_white_player) {
+       player_piece_set_ = bitboard_.white_piece_set();
+       opponent_piece_set_ = bitboard_.black_piece_set();
+       ydiff_ = 1;
+     } else {
+       player_piece_set_ = bitboard_.black_piece_set();
+       opponent_piece_set_ = bitboard_.white_piece_set();
+       ydiff_ = -1;
+     }
+   }
+
+   void AddNextMoves(
+       std::vector<Move> *moves) const {
+     Position position;
+     position.x = 0;
+     position.y = 0;
+     for (; position.y < 8; IncrementPosition(&position)) {
+       if (!bitboard_.IsPiecePresent(player_piece_set_, position)) {
+         continue;
+       }
+
+       AddSimpleMovesFromPosition(position, moves);
+       AddJumpMovesFromPosition(position, moves);
+     }
+   }
+
+ private:
+   bool CanMoveToPosition(const Position &position) const {
+     return bitboard_.IsWithinBoard(position) &&
+         !bitboard_.IsEmptySquare(position);
+   }
+
+   void MaybeAddSimpleMove(
+       const Move &move, std::vector<Move> *moves) const {
+     if (CanMoveToPosition(move.end)) {
+       moves->push_back(move);
+     }
+   }
+
+   void AddSimpleMovesFromPosition(const Position &position,
+                                   std::vector<Move> *moves) const {
+     Move move;
+     move.start = position;
+
+     move.end.x = move.start.x + 1;
+     move.end.y = move.start.y + ydiff_;
+     MaybeAddSimpleMove(move, moves);
+
+     move.end.x = move.start.x - 1;
+     move.end.y = move.start.y + ydiff_;
+     MaybeAddSimpleMove(move, moves);
+   }
+
+   void MaybeAddJump(
+       const Position &start, int xdiff, std::vector<Move> *moves) const {
+     Position kill;
+     kill.x = start.x + xdiff;
+     kill.y = start.y + ydiff_;
+
+     Position end;
+     end.x = kill.x + xdiff;
+     end.y = kill.y + ydiff_;
+
+     if (!CanMoveToPosition(end)) return;
+
+     // We need an opponent piece at the kill position.
+     if (!bitboard_.IsPiecePresent(
+           opponent_piece_set_, kill)) {
+       return;
+     }
+
+     moves->push_back(Move(start, end));
+   }
+
+   void AddJumpMovesFromPosition(Position position,
+                                 std::vector<Move> *moves) const {
+     MaybeAddJump(position, 1, moves);
+     MaybeAddJump(position, -1, moves);
+   }
+
+   const BitBoard &bitboard_;
+   unsigned int player_piece_set_;
+   unsigned int opponent_piece_set_;
+   int ydiff_;
 };
 
 struct GameState {
