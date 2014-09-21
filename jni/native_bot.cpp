@@ -124,30 +124,6 @@ class BitBoard {
        !IsPiecePresent(black_piece_set_, position_mask);
    }
 
-   void AppendNextWhiteMoveStates(std::vector<BitBoard> *states) const {
-     const bool move_states = true;
-     const bool is_white_player = true;
-     AppendGameStatesForPlayer(move_states, is_white_player, states);
-   }
-
-   void AppendNextWhiteJumpStates(std::vector<BitBoard> *states) const {
-     const bool move_states = false;
-     const bool is_white_player = true;
-     AppendGameStatesForPlayer(move_states, is_white_player, states);
-   }
-
-   void AppendNextBlackMoveStates(std::vector<BitBoard> *states) const {
-     const bool move_states = true;
-     const bool is_white_player = false;
-     AppendGameStatesForPlayer(move_states, is_white_player, states);
-   }
-
-   void AppendNextBlackJumpStates(std::vector<BitBoard> *states) const {
-     const bool move_states = false;
-     const bool is_white_player = false;
-     AppendGameStatesForPlayer(move_states, is_white_player, states);
-   }
-
    void ApplyMove(const bool is_white_player, const Move &move) {
      unsigned int *player_piece_set = &white_piece_set_;
      unsigned int *opponent_piece_set = &black_piece_set_;
@@ -207,125 +183,6 @@ class BitBoard {
        piece_set &= (piece_set - 1);
      }
      return count;
-   }
-
-   // Returns the piece set modified by moving a piece in current_piece_set
-   // from a position indicated by position_mask to a position indicated by
-   // next_move_mask.
-   unsigned int GetNextPieceSetForMove(unsigned int position_mask,
-                                       unsigned int next_move_mask,
-                                       unsigned int current_piece_set) const {
-     unsigned int next_piece_set = current_piece_set;
-     // Clear the bit for the current position mask.
-     ClearPiece(position_mask, &next_piece_set);
-     // Set it for the next position mask.
-     SetPiece(next_move_mask, &next_piece_set);
-     return next_piece_set;
-   }
-
-   // Creates a new move state for (x, y) if there exists a valid move for it
-   // and appends it to 'states'.
-   void MaybeAppendMoveState(const bool is_white_player,
-                             const unsigned int position_mask,
-                             const int x, const int y,
-                             unsigned int current_piece_set,
-                             std::vector<BitBoard> *states) const {
-     // Return if not within board.
-     if (!IsWithinBoard(x, y)) return;
-     unsigned int next_move_mask = GetPositionMaskForIndex(x, y);
-
-     // If the square is not empty, we can't move there.
-     if (!IsEmptySquare(next_move_mask)) return;
-
-     unsigned int next_piece_set =
-         GetNextPieceSetForMove(position_mask,
-                                next_move_mask,
-                                current_piece_set);
-
-     if (is_white_player) {
-       states->push_back(BitBoard(next_piece_set, black_piece_set_));
-     } else {
-       states->push_back(BitBoard(white_piece_set_, next_piece_set));
-     }
-   }
-
-   // Creates a new jump state 'start' at (x, y) in the direction indicated by
-   // (xdiff, ydiff) if there exists a valid jump for it and appends it to
-   // 'states'.
-   void MaybeAppendJumpState(const bool is_white_player,
-                             const unsigned int position_mask,
-                             const int x, const int y,
-                             const int xdiff, const int ydiff,
-                             unsigned int player_piece_set,
-                             unsigned int opponent_piece_set,
-                             std::vector<BitBoard> *states) const {
-     const int kill_x = x + xdiff;
-     const int kill_y = y + ydiff;
-     const int dest_x = kill_x + xdiff;
-     const int dest_y = kill_y + ydiff;
-     // Return if the destination is not in the board.
-     if (!IsWithinBoard(dest_x, dest_y)) return;
-
-     unsigned int kill_piece_mask = GetPositionMaskForIndex(kill_x, kill_y);
-     // We need an opponent piece at kill_piece_mask.
-     if (!IsPiecePresent(opponent_piece_set, kill_piece_mask)) return;
-
-     unsigned int next_move_mask = GetPositionMaskForIndex(dest_x, dest_y);
-
-     // If the destination square is not empty, we can't move there.
-     if (!IsEmptySquare(next_move_mask)) return;
-
-     unsigned int next_player_piece_set =
-         GetNextPieceSetForMove(position_mask,
-                                next_move_mask,
-                                player_piece_set);
-
-     // We also need to kill the opponent's piece at kill_piece_mask.
-     ClearPiece(kill_piece_mask, &opponent_piece_set);
-
-     if (is_white_player) {
-       states->push_back(BitBoard(next_player_piece_set, opponent_piece_set));
-     } else {
-       states->push_back(BitBoard(opponent_piece_set, next_player_piece_set));
-     }
-   }
-
-   // Appends the next possible game states for the player.
-   void AppendGameStatesForPlayer(const bool move_states,
-                                  const bool is_white_player,
-                                  std::vector<BitBoard> *states) const {
-     int ydiff;
-     unsigned int player_piece_set;
-     unsigned int opponent_piece_set;
-     if (is_white_player) {
-       player_piece_set = white_piece_set_;
-       opponent_piece_set = black_piece_set_;
-       ydiff = 1;
-     } else {
-       player_piece_set = black_piece_set_;
-       opponent_piece_set = white_piece_set_;
-       ydiff = -1;
-     }
-
-     unsigned int position_mask = 1;
-     for (int i = 0; i < 32; ++i, position_mask <<= 1) {
-       if (!IsPiecePresent(player_piece_set, position_mask)) continue;
-
-       int x, y;
-       GetXYForBitIndex(i, &x, &y);
-
-       if (move_states) {
-         MaybeAppendMoveState(is_white_player, position_mask, x + 1, y + ydiff,
-             player_piece_set, states);
-         MaybeAppendMoveState(is_white_player, position_mask, x - 1, y + ydiff,
-             player_piece_set, states);
-       } else {
-         MaybeAppendJumpState(is_white_player, position_mask, x, y, 1, ydiff,
-             player_piece_set, opponent_piece_set, states);
-         MaybeAppendJumpState(is_white_player, position_mask, x, y, -1, ydiff,
-             player_piece_set, opponent_piece_set, states);
-       }
-     }
    }
 
    unsigned int white_piece_set_;
@@ -435,7 +292,9 @@ struct GameState {
     ss << "Board: " << board.DebugString()
        << " is_white_player: " << is_white_player
        << " is_jump: " << is_jump;
-      //is_jump ? (" last_jump_position" + last_jump_position.DebugString()) : "";
+    if (is_jump) {
+       ss << " last_jump_position: " + last_jump_position.DebugString();
+    }
     return ss.str();
   }
 };
@@ -456,76 +315,6 @@ void ApplyMove(const GameState &input_state,
   } else {
     output_state->is_jump = false;
     output_state->is_white_player = !input_state.is_white_player;
-  }
-}
-
-void AppendNextMoveStates(const std::vector<BitBoard> &next_boards,
-                          const bool is_white_player,
-                          std::vector<GameState> *next_states) {
-  next_states->reserve(next_states->size() + next_boards.size());
-  for (int i = 0; i < next_boards.size(); ++i) {
-    next_states->push_back(GameState());
-
-    GameState &state = next_states->back();
-    state.board = next_boards[i];
-    state.is_jump = false;
-    state.is_white_player = !is_white_player;
-  }
-}
-
-bool HasJumpStates(BitBoard board, bool is_white_player) {
-  // TODO(dhyanesh): This is not entirely accurate. We need to check jump
-  // states only from the last jump move.
-  std::vector<BitBoard> states;
-  if (is_white_player) {
-    board.AppendNextWhiteJumpStates(&states);
-  } else {
-    board.AppendNextBlackJumpStates(&states);
-  }
-  return states.size() > 0;
-}
-
-void AppendNextJumpStates(const std::vector<BitBoard> &next_boards,
-                          const bool is_white_player,
-                          std::vector<GameState> *next_states) {
-  next_states->reserve(next_states->size() + next_boards.size());
-  for (int i = 0; i < next_boards.size(); ++i) {
-    next_states->push_back(GameState());
-
-    GameState &state = next_states->back();
-    state.board = next_boards[i];
-    state.is_jump = HasJumpStates(state.board,
-                                             is_white_player);
-    state.is_white_player = state.is_jump ?
-      is_white_player : !is_white_player;
-  }
-}
-
-void AppendNextGameStates(const GameState &game_state,
-                          std::vector<GameState> *next_states) {
-  std::vector<BitBoard> next_boards;
-  if (game_state.is_white_player) {
-    if (!game_state.is_jump) {
-      game_state.board.AppendNextWhiteMoveStates(&next_boards);
-      AppendNextMoveStates(
-          next_boards, game_state.is_white_player,next_states);
-    }
-    next_boards.clear();
-
-    game_state.board.AppendNextWhiteJumpStates(&next_boards);
-    AppendNextJumpStates(
-        next_boards, game_state.is_white_player, next_states);
-  } else {
-    if (!game_state.is_jump) {
-      game_state.board.AppendNextBlackMoveStates(&next_boards);
-      AppendNextMoveStates(
-          next_boards, game_state.is_white_player, next_states);
-    }
-
-    next_boards.clear();
-    game_state.board.AppendNextBlackJumpStates(&next_boards);
-    AppendNextJumpStates(
-        next_boards, game_state.is_white_player, next_states);
   }
 }
 
@@ -554,13 +343,6 @@ class RandomBot : public BotBase {
   RandomBot(GameState *game_state) : BotBase(game_state) { }
 
   virtual bool PlayMove() {
-    // std::vector<GameState> next_states;
-    // AppendNextGameStates(game_state(), &next_states);
-
-    // if (next_states.empty()) return false;
-
-    // int index = random() % next_states.size();
-    // UpdateGameState(next_states[index]);
     std::vector<Move> moves;
     MoveGenerator generator(game_state().board);
     generator.SetPlayer(game_state().is_white_player);
@@ -607,8 +389,6 @@ class MinMaxBot : public BotBase {
   Result FindBestMove(const GameState &game_state, int depth) {
     static const int kMaxDepth = 3;
 
-    // std::vector<GameState> next_states;
-    // AppendNextGameStates(game_state, &next_states);
     MoveGenerator generator(game_state.board);
     generator.SetPlayer(game_state.is_white_player);
 
