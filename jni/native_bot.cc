@@ -8,78 +8,39 @@
 //  08 # 09 # 10 # 11 #
 //  # 04 # 05 # 06 # 07
 //  00 # 01 # 02 # 03 #
-//
+
+#include "square.h"
+
+#include <android/log.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <jni.h>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <jni.h>
-#include <android/log.h>
-
-// Obtains the bit index for a (x, y) position on the board.
-inline int GetBitIndexForSquare(int x, int y) {
- return y * 4 + x / 2;
-}
-
-// Reverse of the function above.
-inline void GetXYForBitIndex(int index, int *x, int *y) {
- *y = index / 4;
- *x = (index % 4) * 2 + (*y) % 2;
-}
-
-inline unsigned int GetPositionMaskForIndex(int x, int y) {
- return (1 << GetBitIndexForSquare(x, y));
-}
-
-struct Position {
-  int x, y;
-
-  unsigned int GetPositionMask() const {
-    return GetPositionMaskForIndex(x, y);
-  }
-
-  std::string DebugString() const {
-    std::stringstream ss;
-    ss << "(" << x << "," << y << ")";
-    return ss.str();
-  }
-};
-
-void IncrementPosition(Position *position) {
-  position->x += 2;
-  if (position->x >= 8) {
-    ++position->y;
-    position->x = position->y % 2;
-  }
-}
-
-inline void GetPositionForBitIndex(int index, Position *position) {
-  GetXYForBitIndex(index, &position->x, &position->y);
-};
 
 struct Move {
   Move() { }
-  Move(const Position &st, const Position &en)
+  Move(const Square &st, const Square &en)
       : start(st), end(en) { }
 
   bool IsJump() const {
     return abs(end.x - start.x) == 2;
   }
 
-  void FillJumpPosition(Position *position) const {
+  void FillJumpSquare(Square *square) const {
     assert(IsJump());
-    position->x = (end.x + start.x) / 2;
-    position->y = (end.y + start.y) / 2;
+    square->x = (end.x + start.x) / 2;
+    square->y = (end.y + start.y) / 2;
   }
 
   std::string DebugString() const {
     return "Start: " + start.DebugString() + " end: " + end.DebugString();
   }
 
-  Position start;
-  Position end;
+  Square start;
+  Square end;
 };
 
 class BitBoard {
@@ -114,14 +75,14 @@ class BitBoard {
      return CountBits(black_piece_set());
    }
 
-   bool IsEmptySquare(const Position &position) const {
-     return IsEmptySquare(position.GetPositionMask());
+   bool IsEmptySquare(const Square &square) const {
+     return IsEmptySquare(square.GetMask());
    }
 
-   // Returns true if the position specified by the mask is an empty square.
-   bool IsEmptySquare(unsigned int position_mask) const {
-     return !IsPiecePresent(white_piece_set_, position_mask) &&
-       !IsPiecePresent(black_piece_set_, position_mask);
+   // Returns true if the square specified by the mask is an empty square.
+   bool IsEmptySquare(unsigned int square_mask) const {
+     return !IsPiecePresent(white_piece_set_, square_mask) &&
+       !IsPiecePresent(black_piece_set_, square_mask);
    }
 
    void ApplyMove(const bool is_white_player, const Move &move) {
@@ -132,26 +93,26 @@ class BitBoard {
        opponent_piece_set = &white_piece_set_;
      }
 
-     ClearPiece(move.start.GetPositionMask(), player_piece_set);
-     SetPiece(move.end.GetPositionMask(), player_piece_set);
+     ClearPiece(move.start.GetMask(), player_piece_set);
+     SetPiece(move.end.GetMask(), player_piece_set);
      if (move.IsJump()) {
-       Position jump_position;
-       move.FillJumpPosition(&jump_position);
-       ClearPiece(jump_position.GetPositionMask(), opponent_piece_set);
+       Square jump_square;
+       move.FillJumpSquare(&jump_square);
+       ClearPiece(jump_square.GetMask(), opponent_piece_set);
      }
    }
 
    static bool IsPiecePresent(
-       unsigned int piece_set, const Position &position) {
-     return IsPiecePresent(piece_set, position.GetPositionMask());
+       unsigned int piece_set, const Square &square) {
+     return IsPiecePresent(piece_set, square.GetMask());
    }
 
    static bool IsWithinBoard(int x, int y) {
      return x >= 0 && x < kBoardSize && y >= 0 && y < kBoardSize;
    }
 
-   static bool IsWithinBoard(Position position) {
-     return IsWithinBoard(position.x, position.y);
+   static bool IsWithinBoard(Square square) {
+     return IsWithinBoard(square.x, square.y);
    }
 
    std::string DebugString() const {
@@ -165,16 +126,16 @@ class BitBoard {
    static const int kBoardSize = 8;
 
    static bool IsPiecePresent(unsigned int piece_set,
-                              unsigned int position_mask) {
-     return (piece_set & position_mask) != 0;
+                              unsigned int square_mask) {
+     return (piece_set & square_mask) != 0;
    }
 
-   static void ClearPiece(unsigned int position_mask, unsigned int *piece_set) {
-     *piece_set &= ~position_mask;
+   static void ClearPiece(unsigned int square_mask, unsigned int *piece_set) {
+     *piece_set &= ~square_mask;
    }
 
-   static void SetPiece(unsigned int position_mask, unsigned int *piece_set) {
-     *piece_set |= position_mask;
+   static void SetPiece(unsigned int square_mask, unsigned int *piece_set) {
+     *piece_set |= square_mask;
    }
 
    static unsigned int CountBits(unsigned int piece_set) {
@@ -207,36 +168,36 @@ class MoveGenerator {
    }
 
    void AddNextMoves(std::vector<Move> *moves) const {
-     Position position;
-     position.x = 0;
-     position.y = 0;
-     for (; position.y < 8; IncrementPosition(&position)) {
-       if (!bitboard_.IsPiecePresent(player_piece_set_, position)) {
+     Square square;
+     square.x = 0;
+     square.y = 0;
+     for (; square.y < 8; IncrementSquare(&square)) {
+       if (!bitboard_.IsPiecePresent(player_piece_set_, square)) {
          continue;
        }
 
-       AddSimpleMovesFromPosition(position, moves);
-       AddJumpMovesFromPosition(position, moves);
+       AddSimpleMovesFromSquare(square, moves);
+       AddJumpMovesFromSquare(square, moves);
      }
    }
 
  private:
-   bool CanMoveToPosition(const Position &position) const {
-     return bitboard_.IsWithinBoard(position) &&
-         bitboard_.IsEmptySquare(position);
+   bool CanMoveToSquare(const Square &square) const {
+     return bitboard_.IsWithinBoard(square) &&
+         bitboard_.IsEmptySquare(square);
    }
 
    void MaybeAddSimpleMove(
        const Move &move, std::vector<Move> *moves) const {
-     if (CanMoveToPosition(move.end)) {
+     if (CanMoveToSquare(move.end)) {
        moves->push_back(move);
      }
    }
 
-   void AddSimpleMovesFromPosition(const Position &position,
+   void AddSimpleMovesFromSquare(const Square &square,
                                    std::vector<Move> *moves) const {
      Move move;
-     move.start = position;
+     move.start = square;
 
      move.end.x = move.start.x + 1;
      move.end.y = move.start.y + ydiff_;
@@ -248,18 +209,18 @@ class MoveGenerator {
    }
 
    void MaybeAddJump(
-       const Position &start, int xdiff, std::vector<Move> *moves) const {
-     Position kill;
+       const Square &start, int xdiff, std::vector<Move> *moves) const {
+     Square kill;
      kill.x = start.x + xdiff;
      kill.y = start.y + ydiff_;
 
-     Position end;
+     Square end;
      end.x = kill.x + xdiff;
      end.y = kill.y + ydiff_;
 
-     if (!CanMoveToPosition(end)) return;
+     if (!CanMoveToSquare(end)) return;
 
-     // We need an opponent piece at the kill position.
+     // We need an opponent piece at the kill square.
      if (!bitboard_.IsPiecePresent(
            opponent_piece_set_, kill)) {
        return;
@@ -268,10 +229,10 @@ class MoveGenerator {
      moves->push_back(Move(start, end));
    }
 
-   void AddJumpMovesFromPosition(Position position,
+   void AddJumpMovesFromSquare(Square square,
                                  std::vector<Move> *moves) const {
-     MaybeAddJump(position, 1, moves);
-     MaybeAddJump(position, -1, moves);
+     MaybeAddJump(square, 1, moves);
+     MaybeAddJump(square, -1, moves);
    }
 
    const BitBoard &bitboard_;
@@ -282,7 +243,7 @@ class MoveGenerator {
 
 struct GameState {
   BitBoard board;
-  Position last_jump_position;
+  Square last_jump_square;
 
   bool is_white_player;
   bool is_jump;
@@ -293,7 +254,7 @@ struct GameState {
        << " is_white_player: " << is_white_player
        << " is_jump: " << is_jump;
     if (is_jump) {
-       ss << " last_jump_position: " + last_jump_position.DebugString();
+       ss << " last_jump_square: " + last_jump_square.DebugString();
     }
     return ss.str();
   }
@@ -310,7 +271,7 @@ void ApplyMove(const GameState &input_state,
 
   if (move.IsJump()) {
     output_state->is_jump = true;
-    output_state->last_jump_position = move.end;
+    output_state->last_jump_square = move.end;
     output_state->is_white_player = input_state.is_white_player;
   } else {
     output_state->is_jump = false;
