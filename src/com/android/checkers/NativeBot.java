@@ -53,6 +53,6 @@ public class NativeBot extends AbstractBot {
 	
   static {
     System.loadLibrary("gnustl_shared");
-    System.loadLibrary("native-bot");
+    System.loadLibrary("native_bot");
   }
 }
