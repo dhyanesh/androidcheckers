@@ -56,8 +56,14 @@ struct Move {
   Move(const Position &st, const Position &en)
       : start(st), end(en) { }
 
-  bool IsJumpMove() const {
+  bool IsJump() const {
     return abs(end.x - start.x) == 2;
+  }
+
+  void FillJumpPosition(Position *position) const {
+    assert(IsJump());
+    position->x = (end.x + start.x) / 2;
+    position->y = (end.y + start.y) / 2;
   }
 
   Position start;
@@ -128,6 +134,23 @@ class BitBoard {
      const bool move_states = false;
      const bool is_white_player = false;
      AppendGameStatesForPlayer(move_states, is_white_player, states);
+   }
+
+   void ApplyMove(const bool is_white_player, const Move &move) {
+     unsigned int *player_piece_set = &white_piece_set_;
+     unsigned int *opponent_piece_set = &black_piece_set_;
+     if (!is_white_player) {
+       unsigned int *player_piece_set = &black_piece_set_;
+       unsigned int *opponent_piece_set = &white_piece_set_;
+     }
+
+     ClearPiece(move.start.GetPositionMask(), player_piece_set);
+     SetPiece(move.end.GetPositionMask(), player_piece_set);
+     if (move.IsJump()) {
+       Position jump_position;
+       move.FillJumpPosition(&jump_position);
+       ClearPiece(jump_position.GetPositionMask(), opponent_piece_set);
+     }
    }
 
    static bool IsPiecePresent(
@@ -384,9 +407,30 @@ class MoveGenerator {
 
 struct GameState {
   BitBoard board;
+  Position last_jump_position;
+
   bool is_white_player;
-  bool is_move_again_mode;
+  bool is_jump;
 };
+
+// Requires that move is a valid Move that can be applied to input_state.
+void ApplyMove(const GameState &input_state,
+               const Move &move,
+               GameState *output_state) {
+  assert(!input_state.board.is_jump || !move.IsJump());
+
+  *output_state = input_state;
+  output_state->board.ApplyMove(input_state.is_white_player, move);
+
+  if (move.IsJump()) {
+    output_state->is_jump = true;
+    output_state->last_jump_position = move.end;
+    output_state->is_white_player = input_state.is_white_player;
+  } else {
+    output_state->is_jump = false;
+    output_state->is_white_player = !input_state.is_white_player;
+  }
+}
 
 void AppendNextMoveStates(const std::vector<BitBoard> &next_boards,
                           const bool is_white_player,
@@ -397,7 +441,7 @@ void AppendNextMoveStates(const std::vector<BitBoard> &next_boards,
 
     GameState &state = next_states->back();
     state.board = next_boards[i];
-    state.is_move_again_mode = false;
+    state.is_jump = false;
     state.is_white_player = !is_white_player;
   }
 }
@@ -423,9 +467,9 @@ void AppendNextJumpStates(const std::vector<BitBoard> &next_boards,
 
     GameState &state = next_states->back();
     state.board = next_boards[i];
-    state.is_move_again_mode = HasJumpStates(state.board,
+    state.is_jump = HasJumpStates(state.board,
                                              is_white_player);
-    state.is_white_player = state.is_move_again_mode ?
+    state.is_white_player = state.is_jump ?
       is_white_player : !is_white_player;
   }
 }
@@ -434,7 +478,7 @@ void AppendNextGameStates(const GameState &game_state,
                           std::vector<GameState> *next_states) {
   std::vector<BitBoard> next_boards;
   if (game_state.is_white_player) {
-    if (!game_state.is_move_again_mode) {
+    if (!game_state.is_jump) {
       game_state.board.AppendNextWhiteMoveStates(&next_boards);
       AppendNextMoveStates(
           next_boards, game_state.is_white_player,next_states);
@@ -445,7 +489,7 @@ void AppendNextGameStates(const GameState &game_state,
     AppendNextJumpStates(
         next_boards, game_state.is_white_player, next_states);
   } else {
-    if (!game_state.is_move_again_mode) {
+    if (!game_state.is_jump) {
       game_state.board.AppendNextBlackMoveStates(&next_boards);
       AppendNextMoveStates(
           next_boards, game_state.is_white_player, next_states);
@@ -587,7 +631,7 @@ extern "C" {
     jint white_pieces,
     jint black_pieces,
     jboolean is_white_player,
-    jboolean is_move_again_mode);
+    jboolean is_jump);
 }
 
 jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
@@ -596,12 +640,12 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
     jint white_pieces,
     jint black_pieces,
     jboolean is_white_player,
-    jboolean is_move_again_mode) {
+    jboolean is_jump) {
   GameState game_state;
   game_state.board.set_white_pieces(white_pieces);
   game_state.board.set_black_pieces(black_pieces);
   game_state.is_white_player = is_white_player;
-  game_state.is_move_again_mode = is_move_again_mode;
+  game_state.is_jump = is_jump;
 
   char buf[100];
   snprintf(buf, sizeof(buf), "(%x, %x)",
@@ -641,7 +685,7 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
   jfieldID move_again_mode_field_id = environment->GetFieldID(
       move_result_class_id, "isMoveAgainMode", "Z");
   environment->SetBooleanField(move_result, move_again_mode_field_id,
-      game_state.is_move_again_mode);
+      game_state.is_jump);
 
   return true;
 }
