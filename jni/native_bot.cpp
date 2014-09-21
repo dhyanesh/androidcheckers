@@ -349,8 +349,7 @@ class MoveGenerator {
      }
    }
 
-   void AddNextMoves(
-       std::vector<Move> *moves) const {
+   void AddNextMoves(std::vector<Move> *moves) const {
      Position position;
      position.x = 0;
      position.y = 0;
@@ -608,24 +607,25 @@ class MinMaxBot : public BotBase {
   Result FindBestMove(const GameState &game_state, int depth) {
     static const int kMaxDepth = 3;
 
-    std::vector<GameState> next_states;
-    AppendNextGameStates(game_state, &next_states);
+    // std::vector<GameState> next_states;
+    // AppendNextGameStates(game_state, &next_states);
+    MoveGenerator generator(game_state.board);
+    generator.SetPlayer(game_state.is_white_player);
+
+    std::vector<Move> next_moves;
+    generator.AddNextMoves(&next_moves);
 
     Result best_result;
     best_result.final_score = game_state.is_white_player ? -50 : 50;
 
-    char buf[200];
-    snprintf(buf, sizeof(buf),
-        "Evaluating state at depth: %d state:(%x, %x)), states to eval: %d",
-        depth,
-        game_state.board.white_piece_set(),
-        game_state.board.black_piece_set(),
-        next_states.size());
-  __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
-      buf);
+    __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
+        "Evaluating state at depth: %d state: %s",
+          depth,
+          game_state.DebugString().c_str());
 
-    for (int i = 0; i < next_states.size(); ++i) {
-      GameState &state = next_states[i];
+    for (int i = 0; i < next_moves.size(); ++i) {
+      GameState state;
+      ApplyMove(game_state, next_moves[i], &state);
       if (depth == kMaxDepth) {
         int score = GameScore(state.board);
         if (game_state.is_white_player) {
@@ -655,13 +655,10 @@ class MinMaxBot : public BotBase {
       }
     }
 
-    snprintf(buf, sizeof(buf),
-        "Returning result at depth: %d state:(%x, %x))",
-        depth,
-        best_result.game_state.board.white_piece_set(),
-        best_result.game_state.board.black_piece_set());
     __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
-        buf);
+        "Returning result at depth: %d state: ",
+        depth,
+        best_result.game_state.DebugString().c_str());
     return best_result;
   }
 };
@@ -692,7 +689,7 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
   __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
       "GameState before: %s", game_state.DebugString().c_str());
 
-  BotBase *bot = new RandomBot(&game_state);
+  BotBase *bot = new MinMaxBot(&game_state);
   if (!bot->PlayMove()) {
     __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
         "No possible bot moves.");
