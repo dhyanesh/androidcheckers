@@ -388,116 +388,108 @@ struct GameState {
   bool is_move_again_mode;
 };
 
-class GameCore {
- public:
-  GameCore(GameState *game_state) : game_state_(game_state) { }
+void AppendNextMoveStates(const std::vector<BitBoard> &next_boards,
+                          const bool is_white_player,
+                          std::vector<GameState> *next_states) {
+  next_states->reserve(next_states->size() + next_boards.size());
+  for (int i = 0; i < next_boards.size(); ++i) {
+    next_states->push_back(GameState());
 
-  void AppendNextGameStates(std::vector<GameState> *next_states) const {
-    std::vector<BitBoard> next_boards;
-    if (game_state_->is_white_player) {
-      if (!game_state_->is_move_again_mode) {
-        game_state_->board.AppendNextWhiteMoveStates(&next_boards);
-        AppendNextMoveStates(next_boards, next_states);
-      }
-      next_boards.clear();
+    GameState &state = next_states->back();
+    state.board = next_boards[i];
+    state.is_move_again_mode = false;
+    state.is_white_player = !is_white_player;
+  }
+}
 
-      game_state_->board.AppendNextWhiteJumpStates(&next_boards);
-      AppendNextJumpStates(next_boards, next_states);
-    } else {
-      if (!game_state_->is_move_again_mode) {
-        game_state_->board.AppendNextBlackMoveStates(&next_boards);
-        AppendNextMoveStates(next_boards, next_states);
-      }
+bool HasJumpStates(BitBoard board, bool is_white_player) {
+  // TODO(dhyanesh): This is not entirely accurate. We need to check jump
+  // states only from the last jump move.
+  std::vector<BitBoard> states;
+  if (is_white_player) {
+    board.AppendNextWhiteJumpStates(&states);
+  } else {
+    board.AppendNextBlackJumpStates(&states);
+  }
+  return states.size() > 0;
+}
 
-      next_boards.clear();
-      game_state_->board.AppendNextBlackJumpStates(&next_boards);
-      AppendNextJumpStates(next_boards, next_states);
+void AppendNextJumpStates(const std::vector<BitBoard> &next_boards,
+                          const bool is_white_player,
+                          std::vector<GameState> *next_states) {
+  next_states->reserve(next_states->size() + next_boards.size());
+  for (int i = 0; i < next_boards.size(); ++i) {
+    next_states->push_back(GameState());
+
+    GameState &state = next_states->back();
+    state.board = next_boards[i];
+    state.is_move_again_mode = HasJumpStates(state.board,
+                                             is_white_player);
+    state.is_white_player = state.is_move_again_mode ?
+      is_white_player : !is_white_player;
+  }
+}
+
+void AppendNextGameStates(const GameState &game_state,
+                          std::vector<GameState> *next_states) {
+  std::vector<BitBoard> next_boards;
+  if (game_state.is_white_player) {
+    if (!game_state.is_move_again_mode) {
+      game_state.board.AppendNextWhiteMoveStates(&next_boards);
+      AppendNextMoveStates(
+          next_boards, game_state.is_white_player,next_states);
     }
-  }
+    next_boards.clear();
 
-  void DoMove(const GameState &next_state) {
-    *game_state_ = next_state;
-  }
-
-  const GameState &game_state() const {
-    return *game_state_;
-  }
-
-  GameState &game_state() {
-    return *game_state_;
-  }
-
- private:
-  void AppendNextMoveStates(const std::vector<BitBoard> &next_boards,
-                            std::vector<GameState> *next_states) const {
-    next_states->reserve(next_states->size() + next_boards.size());
-    for (int i = 0; i < next_boards.size(); ++i) {
-      next_states->push_back(GameState());
-
-      GameState &state = next_states->back();
-      state.board = next_boards[i];
-      state.is_move_again_mode = false;
-      state.is_white_player = !game_state_->is_white_player;
+    game_state.board.AppendNextWhiteJumpStates(&next_boards);
+    AppendNextJumpStates(
+        next_boards, game_state.is_white_player, next_states);
+  } else {
+    if (!game_state.is_move_again_mode) {
+      game_state.board.AppendNextBlackMoveStates(&next_boards);
+      AppendNextMoveStates(
+          next_boards, game_state.is_white_player, next_states);
     }
-  }
 
-  void AppendNextJumpStates(const std::vector<BitBoard> &next_boards,
-                            std::vector<GameState> *next_states) const {
-    next_states->reserve(next_states->size() + next_boards.size());
-    for (int i = 0; i < next_boards.size(); ++i) {
-      next_states->push_back(GameState());
-
-      GameState &state = next_states->back();
-      state.board = next_boards[i];
-      state.is_move_again_mode = HasJumpStates(state.board,
-                                               game_state_->is_white_player);
-      state.is_white_player = state.is_move_again_mode ?
-        game_state_->is_white_player : !game_state_->is_white_player;
-    }
+    next_boards.clear();
+    game_state.board.AppendNextBlackJumpStates(&next_boards);
+    AppendNextJumpStates(
+        next_boards, game_state.is_white_player, next_states);
   }
-
-  bool HasJumpStates(BitBoard board, bool is_white_player) const {
-    // TODO(dhyanesh): This is not entirely accurate. We need to check jump
-    // states only from the last jump move.
-    std::vector<BitBoard> states;
-    if (is_white_player) {
-      board.AppendNextWhiteJumpStates(&states);
-    } else {
-      board.AppendNextBlackJumpStates(&states);
-    }
-    return states.size() > 0;
-  }
-  GameState *game_state_;
-};
+}
 
 class BotBase {
  public:
-  BotBase(GameCore *game_core) : game_core_(game_core) { }
+  BotBase(GameState *game_state) : game_state_(game_state) { }
 
   // Plays the bot move. Returns false if no more moves are possible.
   virtual bool PlayMove() = 0;
 
  protected:
-  GameCore *game_core() const {
-    return game_core_;
+  const GameState &game_state() const {
+    return *game_state_;
+  }
+
+  void UpdateGameState(const GameState &game_state) {
+    *game_state_ = game_state;
   }
 
  private:
-  GameCore *game_core_;
+  GameState *game_state_;
 };
 
 class RandomBot : public BotBase {
  public:
-  RandomBot(GameCore *game_core) : BotBase(game_core) { }
+  RandomBot(GameState *game_state) : BotBase(game_state) { }
 
   virtual bool PlayMove() {
     std::vector<GameState> next_states;
-    game_core()->AppendNextGameStates(&next_states);
+    AppendNextGameStates(game_state(), &next_states);
 
     if (next_states.empty()) return false;
 
     int index = random() % next_states.size();
-    game_core()->DoMove(next_states[index]);
+    UpdateGameState(next_states[index]);
 
     return true;
   }
@@ -505,13 +497,13 @@ class RandomBot : public BotBase {
 
 class MinMaxBot : public BotBase {
  public:
-  MinMaxBot(GameCore *game_core) : BotBase(game_core) { }
+  MinMaxBot(GameState *game_core) : BotBase(game_core) { }
 
   virtual bool PlayMove() {
-    Result result = FindBestMove(game_core()->game_state(), 0);
+    Result result = FindBestMove(game_state(), 0);
     if (result.final_score == 50 || result.final_score == -50) return false;
 
-    game_core()->DoMove(result.game_state);
+    UpdateGameState(result.game_state);
 
     return true;
   }
@@ -527,12 +519,11 @@ class MinMaxBot : public BotBase {
     return board.NumWhitePieces() - board.NumBlackPieces();
   }
 
-  Result FindBestMove(GameState &game_state, int depth) {
+  Result FindBestMove(const GameState &game_state, int depth) {
     static const int kMaxDepth = 3;
 
     std::vector<GameState> next_states;
-    GameCore core(&game_state);
-    core.AppendNextGameStates(&next_states);
+    AppendNextGameStates(game_state, &next_states);
 
     Result best_result;
     best_result.final_score = game_state.is_white_player ? -50 : 50;
@@ -619,8 +610,7 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
   __android_log_print(ANDROID_LOG_INFO, "native_bot.cc",
       buf);
 
-  GameCore game_core(&game_state);
-  BotBase *bot = new MinMaxBot(&game_core);
+  BotBase *bot = new MinMaxBot(&game_state);
   if (!bot->PlayMove()) return false;
 
   jclass native_random_bot_class_id =
