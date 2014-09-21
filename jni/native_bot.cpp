@@ -12,6 +12,8 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <sstream>
+#include <string>
 #include <vector>
 #include <jni.h>
 #include <android/log.h>
@@ -36,6 +38,12 @@ struct Position {
 
   unsigned int GetPositionMask() const {
     return GetPositionMaskForIndex(x, y);
+  }
+
+  std::string DebugString() const {
+    std::stringstream ss;
+    ss << "(" << x << "," << y << ")";
+    return ss.str();
   }
 };
 
@@ -64,6 +72,10 @@ struct Move {
     assert(IsJump());
     position->x = (end.x + start.x) / 2;
     position->y = (end.y + start.y) / 2;
+  }
+
+  std::string DebugString() const {
+    return "Start: " + start.DebugString() + " end: " + end.DebugString();
   }
 
   Position start;
@@ -140,8 +152,8 @@ class BitBoard {
      unsigned int *player_piece_set = &white_piece_set_;
      unsigned int *opponent_piece_set = &black_piece_set_;
      if (!is_white_player) {
-       unsigned int *player_piece_set = &black_piece_set_;
-       unsigned int *opponent_piece_set = &white_piece_set_;
+       player_piece_set = &black_piece_set_;
+       opponent_piece_set = &white_piece_set_;
      }
 
      ClearPiece(move.start.GetPositionMask(), player_piece_set);
@@ -164,6 +176,13 @@ class BitBoard {
 
    static bool IsWithinBoard(Position position) {
      return IsWithinBoard(position.x, position.y);
+   }
+
+   std::string DebugString() const {
+     std::stringstream ss;
+     ss << "white_piece_set: " << white_piece_set_
+       << "black_piece_set: " << black_piece_set_;
+     return ss.str();
    }
 
  private:
@@ -348,7 +367,7 @@ class MoveGenerator {
  private:
    bool CanMoveToPosition(const Position &position) const {
      return bitboard_.IsWithinBoard(position) &&
-         !bitboard_.IsEmptySquare(position);
+         bitboard_.IsEmptySquare(position);
    }
 
    void MaybeAddSimpleMove(
@@ -411,6 +430,15 @@ struct GameState {
 
   bool is_white_player;
   bool is_jump;
+
+  std::string DebugString() const {
+    std::stringstream ss;
+    ss << "Board: " << board.DebugString()
+       << " is_white_player: " << is_white_player
+       << " is_jump: " << is_jump;
+      //is_jump ? (" last_jump_position" + last_jump_position.DebugString()) : "";
+    return ss.str();
+  }
 };
 
 // Requires that move is a valid Move that can be applied to input_state.
@@ -527,13 +555,27 @@ class RandomBot : public BotBase {
   RandomBot(GameState *game_state) : BotBase(game_state) { }
 
   virtual bool PlayMove() {
-    std::vector<GameState> next_states;
-    AppendNextGameStates(game_state(), &next_states);
+    // std::vector<GameState> next_states;
+    // AppendNextGameStates(game_state(), &next_states);
 
-    if (next_states.empty()) return false;
+    // if (next_states.empty()) return false;
 
-    int index = random() % next_states.size();
-    UpdateGameState(next_states[index]);
+    // int index = random() % next_states.size();
+    // UpdateGameState(next_states[index]);
+    std::vector<Move> moves;
+    MoveGenerator generator(game_state().board);
+    generator.SetPlayer(game_state().is_white_player);
+    generator.AddNextMoves(&moves);
+
+    if (moves.empty()) return false;
+    int index = random() % moves.size();
+
+    __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
+        "Selected move: %s", moves[index].DebugString().c_str());
+
+    GameState next_game_state;
+    ApplyMove(game_state(), moves[index], &next_game_state);
+    UpdateGameState(next_game_state);
 
     return true;
   }
@@ -579,7 +621,7 @@ class MinMaxBot : public BotBase {
         game_state.board.white_piece_set(),
         game_state.board.black_piece_set(),
         next_states.size());
-  __android_log_print(ANDROID_LOG_INFO, "native_bot.cc",
+  __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
       buf);
 
     for (int i = 0; i < next_states.size(); ++i) {
@@ -618,7 +660,7 @@ class MinMaxBot : public BotBase {
         depth,
         best_result.game_state.board.white_piece_set(),
         best_result.game_state.board.black_piece_set());
-    __android_log_print(ANDROID_LOG_INFO, "native_bot.cc",
+    __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
         buf);
     return best_result;
   }
@@ -647,15 +689,18 @@ jboolean Java_com_android_checkers_NativeBot_playNativeBotMove(
   game_state.is_white_player = is_white_player;
   game_state.is_jump = is_jump;
 
-  char buf[100];
-  snprintf(buf, sizeof(buf), "(%x, %x)",
-           game_state.board.white_piece_set(),
-           game_state.board.black_piece_set());
-  __android_log_print(ANDROID_LOG_INFO, "native_bot.cc",
-      buf);
+  __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
+      "GameState before: %s", game_state.DebugString().c_str());
 
-  BotBase *bot = new MinMaxBot(&game_state);
-  if (!bot->PlayMove()) return false;
+  BotBase *bot = new RandomBot(&game_state);
+  if (!bot->PlayMove()) {
+    __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
+        "No possible bot moves.");
+    return false;
+  }
+
+  __android_log_print(ANDROID_LOG_VERBOSE, "native_bot.cc",
+      "GameState after: %s", game_state.DebugString().c_str());
 
   jclass native_random_bot_class_id =
     environment->GetObjectClass(native_random_bot);
